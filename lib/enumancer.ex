@@ -429,6 +429,10 @@ defmodule Enumancer do
     {:last_only, {:reduce, acc, fun}}
   end
 
+  defp parse_call(:map_reduce, [acc, fun]) do
+    {:last_only, {:map_reduce, acc, fun}}
+  end
+
   defp parse_call(:reverse, []) do
     {:last_only, {:reverse, []}}
   end
@@ -663,6 +667,14 @@ defmodule Enumancer do
     end
   end
 
+  defp reduce_acc([{:map_reduce, _acc, fun}], vars) do
+    quote do
+      {values, acc} = unquote(vars.acc)
+      {value, new_acc} = unquote(fun).(unquote(vars.head), acc)
+      {[value | values], new_acc}
+    end
+  end
+
   defp reduce_acc([{:reverse, _acc}], vars) do
     quote do
       [unquote(vars.head) | unquote(vars.acc)]
@@ -788,8 +800,9 @@ defmodule Enumancer do
   defp initial_acc(:count), do: 0
   defp initial_acc(:sum), do: 0
   defp initial_acc(:product), do: 1
-  defp initial_acc({:reduce, _reduce_fun}), do: :__ENUMANCER_RESERVED__
-  defp initial_acc({:reduce, reduce_acc, _reduce_fun}), do: reduce_acc
+  defp initial_acc({:reduce, _fun}), do: :__ENUMANCER_RESERVED__
+  defp initial_acc({:reduce, acc, _fun}), do: acc
+  defp initial_acc({:map_reduce, acc, _fun}), do: {[], acc}
   defp initial_acc({:reverse, acc}), do: acc
   defp initial_acc({:each, _fun}), do: :ok
   defp initial_acc(:join), do: ""
@@ -815,6 +828,14 @@ defmodule Enumancer do
   end
 
   defp wrap_result({:reduce, _, _}, acc_ast), do: acc_ast
+
+  defp wrap_result({:map_reduce, _, _}, acc_ast) do
+    quote do
+      {list, acc} = unquote(acc_ast)
+      {:lists.reverse(list), acc}
+    end
+  end
+
   defp wrap_result({:reverse, _}, acc_ast), do: acc_ast
   defp wrap_result({:each, _}, _), do: :ok
   defp wrap_result(:frequencies, acc_ast), do: acc_ast

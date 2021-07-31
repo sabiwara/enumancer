@@ -51,6 +51,17 @@ defmodule EnumancerTest do
       assert 6 = EnumancerTest.Reduce3.run(1..3)
     end
 
+    test "map_reduce/3" do
+      defmodule EnumancerTest.MapReduce do
+        defenum run(enum) do
+          map_reduce(enum, 0, fn x, acc -> {x * 2, x + acc} end)
+        end
+      end
+
+      assert {[2, 4, 6], 6} = EnumancerTest.MapReduce.run([1, 2, 3])
+      assert {[2, 4, 6], 6} = EnumancerTest.MapReduce.run(1..3)
+    end
+
     test "max" do
       defmodule EnumancerTest.Max do
         defenum run(enum) do
