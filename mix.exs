@@ -18,7 +18,7 @@ defmodule Enumancer.MixProject do
       ],
 
       # hex
-      description: "Macros to effortlessly define highly optimized Enum pipelines",
+      description: "Elixir macros to effortlessly define highly optimized Enum pipelines",
       package: package(),
       name: "Enumancer",
       docs: docs()

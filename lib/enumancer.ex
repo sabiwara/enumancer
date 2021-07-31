@@ -2,30 +2,41 @@ defmodule Enumancer do
   @moduledoc """
   Macros to effortlessly define highly optimized `Enum` pipelines
 
-  ## Motivation
+  ## Overview
 
-  Premature optimization is the root of all evil.
-  For most typical use cases, performance is good enough and the bottleneck
-  is going to be IO anyway (e.g. your database).
+  `Enumancer` provides a `defenum/2` macro, which will convert a pipeline of `Enum`
+  function calls to an optimized tail-recursive function.
 
-  For cases where you actually need the performance, however, `Enumancer` aims to offer
-  an appealing option which will be
-  - faster and using less memory than `Enum` pipelines, which are building wasteful intermediate lists
-  - faster than `Stream` pipelines which come with a runtime overhead (`Enumancer` is compile time)
-  - more flexible than `for` comprehensions (and also, faster)
-  - easier to write than handcrafted recursive functions, since it looks like an idiomatic Elixir pipeline
+      defmodule BlazingFast do
+        import Enumancer
 
-  See the *Case study* section for more detailed explanation.
+        defenum sum_squares(numbers) do
+          numbers
+          |> map(& &1 * &1)
+          |> sum()
+        end
+      end
+
+  There is no need to add `Enum.`, `map/2` will be interpreted as `Enum.map/2`
+  within `defenum/2`.
+
+  In order to see the actual functions that are being generated, you can just
+  replace `defenum/2` by `defenum_explain/2` and the code will be printed in the
+  console.
+
+  The `defenum_explain/2` approach can be useful if you don't want to take the risk of
+  using `Enumancer` and macros in your production code, but it can inspire the
+  implementation of your optimized recursive functions.
 
   ## Available functions
 
-  Most functions taking an `Enumerable` and returning a list by walking the list
-  once can be used anywhere in the pipeline (e.g. `map/2`, `filter/2`, `with_index/2`...).
+  Most functions taking an `Enumerable` and returning a list can be used anywhere
+  in the pipeline (e.g. `map/2`, `filter/2`, `with_index/2`...).
 
   On the other hand, functions taking an `Enumerable` and returning some non-list
   accumulator (e.g. `sum/1`, `join/2`, `max/1`...) can only be used at the end of
-  the pipeline. There are other cases like `sort/1` which are not walking the
-  `enumerable` one by one and are also limited to the end of the pipeline.
+  the pipeline. There are other cases like `sort/1` or `reduce/1` which cannot work
+  without the full list and are also limited to the end of the pipeline.
 
   Functions that need to stop without reducing the `Enumerable` completely, such as
   `take/2` or `any?/1`, are not available at this point, but might be implemented in the future.
@@ -48,18 +59,18 @@ defmodule Enumancer do
 
   ### Anywhere in the pipeline
 
-  - `map/2`
-  - `filter/2`
-  - `reject/2`
-  - `with_index/1`
-  - `with_index/2` (only accepts integer `offset`)
-  - `drop/2` (only accepts positive integer `count`)
-  - `uniq/1`
-  - `uniq_by/2`
-  - `dedup/1`
-  - `dedup_by/2`
-  - `scan/2`
-  - `map_reduce/3 + hd/1` (not plain `map_reduce/3`, see explanation below)
+  - `Enum.map/2`
+  - `Enum.filter/2`
+  - `Enum.reduce/2`
+  - `Enum.reject/2`
+  - `Enum.with_index/1`
+  - `Enum.with_index/2` (only accepts integer `offset`)
+  - `Enum.uniq/1`
+  - `Enum.uniq_by/2`
+  - `Enum.dedup/1`
+  - `Enum.dedup_by/2`
+  - `Enum.scan/2`
+  - `Enum.map_reduce/3` + `hd/1` (not plain `Enum.map_reduce/3`!, see explanation below)
 
   `|> map_reduce(acc, fun)` by itself returns a tuple and cannot be piped any further.
 
@@ -67,115 +78,62 @@ defmodule Enumancer do
 
   ### Only at the end of the pipeline
 
-  - `reduce/2`
-  - `reduce/3`
-  - `max/1`
-  - `max/2` (only with a `module` argument)
-  - `min/1`
-  - `min/2` (only with a `module` argument)
-  - `sum/1`
-  - `product/1`
-  - `reverse/1`
-  - `join/1`
-  - `join/2`
-  - `intersperse/2`
-  - `sort/1`
-  - `sort/2`
-  - `sort_by/2`
-  - `sort_by/3`
-  - `map_reduce/3` (without being followed by `|> hd()`)
+  - `Enum.reduce/2`
+  - `Enum.reduce/3`
+  - `Enum.max/1`
+  - `Enum.max/2` (only with a `module` argument)
+  - `Enum.min/1`
+  - `Enum.min/2` (only with a `module` argument)
+  - `Enum.count/1`
+  - `Enum.sum/1`
+  - `Enum.product/1`
+  - `Enum.reverse/1`
+  - `Enum.join/1`
+  - `Enum.join/2`
+  - `Enum.intersperse/2`
+  - `Enum.sort/1`
+  - `Enum.sort/2`
+  - `Enum.sort_by/2`
+  - `Enum.sort_by/3`
+  - `Enum.map_reduce/3` (without being followed by `|> hd()`)
+  - `Enum.frequencies/1`
+  - `Enum.frequencies_by/2`
+  - `Enum.group_by/2`
   - `Map.new/1`
   - `MapSet.new/1`
+  """
 
-  ## Case study
+  @doc """
+  A macro transforming a pipeline of `Enum` transformations to an optimized
+  recursive function at compile time.
 
-  Let's assume we want to sum the square of all odd numbers within a list.
-  We could typically write:
+  See `Enumancer` documentation for available functions.
 
-      def sum_odd_squares_1(list) do
-        list
-        |> Enum.filter(&rem(&1, 2) == 1)
-        |> Enum.map(& &1 * &1)
-        |> Enum.sum()
-      end
+  ## Examples
 
-  For typical use cases that are not performance sensistive, this will work
-  just fine. But if this is performance critical or needs to work with big
-  lists, this will be highly wasteful: `Enum.filter/2` and `Enum.map/2`
-  will both generate intermediate lists while we only need to keep an
-  integer as accumulator.
+      defmodule BlazingFast do
+        import Enumancer
 
-  A possibile alternative could be to rewrite this using streams to avoid
-  the intermediate structures:
-
-      def sum_odd_squares_2(list) do
-        list
-        |> Stream.filter(&rem(&1, 2) == 1)
-        |> Stream.map(& &1 * &1)
-        |> Enum.sum()
-      end
-
-  However, streams come with their own overhead and this might not be that
-  fast in practice: don't be surprised if your code suddenly got 3 times slower!
-
-  The better alternative in this case would probably be to use a comprehension:
-
-      def sum_odd_squares_3(list) do
-        for x <- list, rem(x, 2) == 1, reduce: 0 do
-          acc -> acc + x * x
+        defenum sum_odd_squares(numbers) do
+          numbers
+          |> filter(&rem(&1, 2) == 1)
+          |> map(& &1 * &1)
+          |> sum()
         end
       end
 
-  But comprehensions can be harder to compose and offer less possibilities than
-  the `Enum` module. What if you wanted to use `Enum.join/2` instead of `Enum.sum/1`?
-
-  Comprehensions with the `:reduce` option can be also less declarative than the `Enum`
-  versions: instead of the term `sum`, you have to explicitly manage an accumulator
-  initiallized to `0`.
-
-  Finally, the fastest option would be to write a dedicated recursive function
-  optimized for this use case:
-
-
-      def sum_odd_squares_4(list) do
-        do_sum_odd_squares_list(list, 0)
-      end
-
-      defp do_sum_odd_squares_list([], acc), do: acc
-      defp do_sum_odd_squares_list([head | tail], acc) do
-        acc =
-          if rem(head, 2) == 1 do
-            acc = acc + head * head
-          else
-            acc
-          end
-
-        do_sum_odd_squares_list(tail, acc)
-      end
-
-  While this is the best option performance-wise, you would need to sacrifice
-  readability and maintainability, making the tradeoff less attractive.
-
-  With the `defenum` macro, you would just write
-
-      defenum sum_odd_squares_5(list) do
-        list
-        |> filter(&rem(&1, 2) == 1)
-        |> map(& &1 * &1)
-        |> sum()
-      end
-
-  and this would basically transpile to the previous recursive version.
-
-  You get to keep both the declarative and powerful syntax of the 1st version using `Enum`,
-  and the performance of the most efficient implementation (4th version) using recursion.
   """
-
   defmacro defenum(head, do: body) do
     do_defenum(head, body, __CALLER__)
   end
 
-  defmacro defenum_debug(head, do: body) do
+  @doc """
+  Same as `defenum/2`, but will print the generated code in the console.
+
+  Useful for debug or learning purpose.
+
+  """
+  defmacro defenum_explain(head, do: body) do
     ast = do_defenum(head, body, __CALLER__)
     Macro.to_string(ast) |> IO.puts()
     ast
