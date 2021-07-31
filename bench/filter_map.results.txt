@@ -1,0 +1,31 @@
+Operating System: Linux
+CPU Information: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
+Number of Available Cores: 8
+Available memory: 15.41 GB
+Elixir 1.12.1
+Erlang 24.0
+
+Benchmark suite executing with the following configuration:
+warmup: 2 s
+time: 5 s
+memory time: 0 ns
+parallel: 1
+inputs: none specified
+Estimated total run time: 28 s
+
+Benchmarking Enum.filter/2 |> Enum.map/2...
+Benchmarking Enumancer filter/2 |> map/2...
+Benchmarking Stream.filter/2 |> Enum.map/2...
+Benchmarking for...
+
+Name                                    ips        average  deviation         median         99th %
+Enumancer filter/2 |> map/2        551.98 K        1.81 μs  ±1085.74%        1.61 μs        2.88 μs
+for                                458.64 K        2.18 μs   ±937.76%        1.91 μs        4.05 μs
+Enum.filter/2 |> Enum.map/2        355.08 K        2.82 μs   ±625.89%        2.44 μs        5.83 μs
+Stream.filter/2 |> Enum.map/2      168.29 K        5.94 μs   ±178.22%        5.33 μs       14.31 μs
+
+Comparison: 
+Enumancer filter/2 |> map/2        551.98 K
+for                                458.64 K - 1.20x slower +0.37 μs
+Enum.filter/2 |> Enum.map/2        355.08 K - 1.55x slower +1.00 μs
+Stream.filter/2 |> Enum.map/2      168.29 K - 3.28x slower +4.13 μs
