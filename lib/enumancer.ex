@@ -17,6 +17,10 @@ defmodule Enumancer do
         end
       end
 
+      1..10_000_000 |> BlazingFast.sum_squares()  # very fast
+      1..10_000_000 |> Enum.map(& &1 * &1) |> Enum.sum()  # super slow
+      1..10_000_000 |> Stream.map(& &1 * &1) |> Enum.sum()  # super slow
+
   There is no need to add `Enum.`, `map/2` will be interpreted as `Enum.map/2`
   within `defenum/2`.
 
