@@ -1,10 +1,13 @@
 defmodule Enumancer.MixProject do
   use Mix.Project
 
+  @version "0.0.1"
+  @github_url "https://github.com/sabiwara/enumancer"
+
   def project do
     [
       app: :enumancer,
-      version: "0.0.1",
+      version: @version,
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -12,18 +15,20 @@ defmodule Enumancer.MixProject do
         docs: :docs,
         "hex.publish": :docs,
         dialyzer: :test
-      ]
+      ],
+
+      # hex
+      description: "Macros to effortlessly define highly optimized Enum pipelines",
+      package: package(),
+      name: "Enumancer",
+      docs: docs()
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
   def application do
-    [
-      extra_applications: [:logger]
-    ]
+    []
   end
 
-  # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
       # doc, benchs
@@ -31,6 +36,23 @@ defmodule Enumancer.MixProject do
       {:benchee, "~> 1.0", only: :bench, runtime: false},
       # CI
       {:dialyxir, "~> 1.0", only: :test, runtime: false}
+    ]
+  end
+
+  defp package do
+    [
+      maintainers: ["sabiwara"],
+      licenses: ["MIT"],
+      links: %{"GitHub" => @github_url},
+      files: ~w(lib mix.exs README.md LICENSE.md)
+    ]
+  end
+
+  defp docs do
+    [
+      source_ref: "v#{@version}",
+      source_url: @github_url,
+      homepage_url: @github_url
     ]
   end
 end

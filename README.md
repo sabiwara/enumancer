@@ -1,11 +1,13 @@
 # Enumancer
 
-**TODO: Add description**
+Macros to effortlessly define highly optimized `Enum` pipelines.
+
+**Warning**: `Enumancer` is an early proof-of-concept. Expect rough edges.
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `enumancer` to your list of dependencies in `mix.exs`:
+`Enumancer` can be installed by adding `enumancer` to your list of dependencies
+in `mix.exs`:
 
 ```elixir
 def deps do
@@ -15,7 +17,13 @@ def deps do
 end
 ```
 
-Documentation can be generated with
-[ExDoc](https://github.com/elixir-lang/ex_doc) and published on
-[HexDocs](https://hexdocs.pm). Once published, the docs can be found at
+Or, if you are using Elixir 1.12, you can just try it out from `iex` or an
+`.exs` script:
+
+```elixir
+iex> Mix.install([:enumancer])
+:ok
+```
+
+The documentation can be found at
 [https://hexdocs.pm/enumancer](https://hexdocs.pm/enumancer).

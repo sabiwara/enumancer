@@ -1,7 +1,6 @@
 defmodule Enumancer do
   @moduledoc """
-  Macros to effortlessly write optimized recursive functions using
-  simple `Enum` pipelines.
+  Macros to effortlessly define highly optimized `Enum` pipelines
 
   ## Motivation
 
@@ -63,6 +62,7 @@ defmodule Enumancer do
   - `map_reduce/3 + hd/1` (not plain `map_reduce/3`, see explanation below)
 
   `|> map_reduce(acc, fun)` by itself returns a tuple and cannot be piped any further.
+
   But `|> map_reduce(acc, fun) |> hd()` can be piped if you only need the mapped list.
 
   ### Only at the end of the pipeline
@@ -70,9 +70,9 @@ defmodule Enumancer do
   - `reduce/2`
   - `reduce/3`
   - `max/1`
-  - `max/2`
+  - `max/2` (only with a `module` argument)
   - `min/1`
-  - `min/2`
+  - `min/2` (only with a `module` argument)
   - `sum/1`
   - `product/1`
   - `reverse/1`
