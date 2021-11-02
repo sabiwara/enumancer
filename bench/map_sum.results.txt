@@ -8,10 +8,10 @@ Erlang 24.0
 Benchmark suite executing with the following configuration:
 warmup: 2 s
 time: 5 s
-memory time: 0 ns
+memory time: 1 s
 parallel: 1
 inputs: none specified
-Estimated total run time: 28 s
+Estimated total run time: 32 s
 
 Benchmarking Enum.map/2 |> Enum.sum/1...
 Benchmarking Enum.reduce/3...
@@ -19,13 +19,23 @@ Benchmarking Enumancer map/2 |> sum/1...
 Benchmarking Stream.map/2 |> Enum.sum/1...
 
 Name                                 ips        average  deviation         median         99th %
-Enumancer map/2 |> sum/1       3154.66 K        0.32 μs  ±1085.13%        0.28 μs        0.67 μs
-Enum.reduce/3                   921.54 K        1.09 μs  ±1511.62%        0.94 μs        2.32 μs
-Enum.map/2 |> Enum.sum/1        606.39 K        1.65 μs  ±1653.51%        1.35 μs        3.04 μs
-Stream.map/2 |> Enum.sum/1      188.92 K        5.29 μs   ±312.88%        4.66 μs       12.16 μs
+Enumancer map/2 |> sum/1           66.77       14.98 ms     ±3.94%       14.87 ms       17.38 ms
+Enum.reduce/3                      66.41       15.06 ms     ±5.32%       14.89 ms       18.77 ms
+Enum.map/2 |> Enum.sum/1           24.69       40.50 ms    ±14.81%       40.80 ms       74.79 ms
+Stream.map/2 |> Enum.sum/1         19.38       51.61 ms     ±4.78%       50.84 ms       59.10 ms
 
 Comparison: 
-Enumancer map/2 |> sum/1       3154.66 K
-Enum.reduce/3                   921.54 K - 3.42x slower +0.77 μs
-Enum.map/2 |> Enum.sum/1        606.39 K - 5.20x slower +1.33 μs
-Stream.map/2 |> Enum.sum/1      188.92 K - 16.70x slower +4.98 μs
+Enumancer map/2 |> sum/1           66.77
+Enum.reduce/3                      66.41 - 1.01x slower +0.0795 ms
+Enum.map/2 |> Enum.sum/1           24.69 - 2.70x slower +25.52 ms
+Stream.map/2 |> Enum.sum/1         19.38 - 3.45x slower +36.63 ms
+
+Memory usage statistics:
+
+Name                          Memory usage
+Enumancer map/2 |> sum/1        0.00005 MB
+Enum.reduce/3                   0.00005 MB - 1.00x memory usage +0 MB
+Enum.map/2 |> Enum.sum/1          27.84 MB - 608091.83x memory usage +27.84 MB
+Stream.map/2 |> Enum.sum/1        61.04 MB - 1333345.83x memory usage +61.04 MB
+
+**All measurements for memory usage were the same**
