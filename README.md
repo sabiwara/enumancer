@@ -2,6 +2,7 @@
 
 [![Hex Version](https://img.shields.io/hexpm/v/enumancer.svg)](https://hex.pm/packages/enumancer)
 [![docs](https://img.shields.io/badge/docs-hexpm-blue.svg)](https://hexdocs.pm/enumancer/)
+[![CI](https://github.com/sabiwara/enumancer/workflows/CI/badge.svg)](https://github.com/sabiwara/enumancer/actions?query=workflow%3ACI)
 
 Elixir macros to effortlessly define highly optimized `Enum` pipelines.
 
