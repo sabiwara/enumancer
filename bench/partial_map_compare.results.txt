@@ -1,0 +1,41 @@
+Operating System: Linux
+CPU Information: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
+Number of Available Cores: 8
+Available memory: 15.40 GB
+Elixir 1.13.2
+Erlang 24.2
+
+Benchmark suite executing with the following configuration:
+warmup: 2 s
+time: 5 s
+memory time: 500 ms
+parallel: 1
+inputs: none specified
+Estimated total run time: 30 s
+
+Benchmarking Enum.all? (Map.get)...
+Benchmarking Enum.all? (access)...
+Benchmarking Enum.reduce_while...
+Benchmarking Map.take...
+
+Name                          ips        average  deviation         median         99th %
+Enum.all? (Map.get)       16.32 K       61.28 μs    ±15.73%       59.52 μs      115.20 μs
+Enum.reduce_while         16.30 K       61.36 μs    ±16.24%       59.95 μs      120.01 μs
+Enum.all? (access)        13.31 K       75.14 μs    ±13.48%       73.90 μs      138.32 μs
+Map.take                   3.10 K      322.49 μs    ±10.06%      312.83 μs      509.76 μs
+
+Comparison: 
+Enum.all? (Map.get)       16.32 K
+Enum.reduce_while         16.30 K - 1.00x slower +0.0816 μs
+Enum.all? (access)        13.31 K - 1.23x slower +13.86 μs
+Map.take                   3.10 K - 5.26x slower +261.20 μs
+
+Memory usage statistics:
+
+Name                   Memory usage
+Enum.all? (Map.get)            64 B
+Enum.reduce_while             112 B - 1.75x memory usage +48 B
+Enum.all? (access)             64 B - 1.00x memory usage +0 B
+Map.take                   111488 B - 1742.00x memory usage +111424 B
+
+**All measurements for memory usage were the same**
