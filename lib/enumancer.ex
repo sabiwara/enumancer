@@ -74,11 +74,11 @@ defmodule Enumancer do
   - `Enum.dedup/1`
   - `Enum.dedup_by/2`
   - `Enum.scan/2`
-  - `Enum.map_reduce/3` + `hd/1` (not plain `Enum.map_reduce/3`!, see explanation below)
+  - `Enum.map_reduce/3` + `elem(0)` (not plain `Enum.map_reduce/3`!, see explanation below)
 
   `|> map_reduce(acc, fun)` by itself returns a tuple and cannot be piped any further.
 
-  But `|> map_reduce(acc, fun) |> hd()` can be piped if you only need the mapped list.
+  But `|> map_reduce(acc, fun) |> elem(0)` can be piped if you only need the mapped list.
 
   ### Only at the end of the pipeline
 
@@ -99,7 +99,7 @@ defmodule Enumancer do
   - `Enum.sort/2`
   - `Enum.sort_by/2`
   - `Enum.sort_by/3`
-  - `Enum.map_reduce/3` (without being followed by `|> hd()`)
+  - `Enum.map_reduce/3` (without being followed by `|> elem(0)`)
   - `Enum.frequencies/1`
   - `Enum.frequencies_by/2`
   - `Enum.group_by/2`
@@ -279,7 +279,7 @@ defmodule Enumancer do
   end
 
   defp parse_body(
-         {:hd, ctx, [{:map_reduce, _, args}]},
+         {:elem, ctx, [{:map_reduce, _, args}, 0]},
          enum_arg_name,
          caller,
          acc,

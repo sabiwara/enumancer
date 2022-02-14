@@ -242,15 +242,15 @@ defmodule EnumancerTest do
       assert [1, 3, 6, 10, 15] = EnumancerTest.Scan.run(1..5)
     end
 
-    test "map_reduce |> hd" do
-      defmodule EnumancerTest.MapReduceHd do
+    test "map_reduce |> elem(0)" do
+      defmodule EnumancerTest.MapReduceNoAcc do
         defenum run(enum) do
-          enum |> map_reduce(0, &{{&1, &2}, &2 + 1}) |> hd()
+          enum |> map_reduce(0, &{{&1, &2}, &2 + 1}) |> elem(0)
         end
       end
 
-      assert [a: 0, b: 1, c: 2] = EnumancerTest.MapReduceHd.run([:a, :b, :c])
-      assert [{100, 0}, {101, 1}, {102, 2}] = EnumancerTest.MapReduceHd.run(100..102)
+      assert [a: 0, b: 1, c: 2] = EnumancerTest.MapReduceNoAcc.run([:a, :b, :c])
+      assert [{100, 0}, {101, 1}, {102, 2}] = EnumancerTest.MapReduceNoAcc.run(100..102)
     end
 
     test "filter |> map" do
@@ -592,18 +592,18 @@ defmodule EnumancerTest do
       assert [1, 3, 15] = EnumancerTest.ScanFilter.run(1..5)
     end
 
-    test "map_reduce |> hd |> filter" do
-      defmodule EnumancerTest.MapReduceHdFilter do
+    test "map_reduce |> elem(0) |> filter" do
+      defmodule EnumancerTest.MapReduceNoAccFilter do
         defenum run(enum) do
           enum
           |> map_reduce(0, &{{&1, &2}, &2 + 1})
-          |> hd()
+          |> elem(0)
           |> filter(fn {x, i} -> x + i != 3 end)
         end
       end
 
-      assert [{1, 0}, {3, 2}] = EnumancerTest.MapReduceHdFilter.run([1, 2, 3])
-      assert [{1, 0}, {3, 2}] = EnumancerTest.MapReduceHdFilter.run(1..3)
+      assert [{1, 0}, {3, 2}] = EnumancerTest.MapReduceNoAccFilter.run([1, 2, 3])
+      assert [{1, 0}, {3, 2}] = EnumancerTest.MapReduceNoAccFilter.run(1..3)
     end
 
     test "filter |> map |> filter |> map" do
