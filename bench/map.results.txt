@@ -1,9 +1,9 @@
-Operating System: Linux
-CPU Information: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
+Operating System: macOS
+CPU Information: Apple M1
 Number of Available Cores: 8
-Available memory: 15.41 GB
-Elixir 1.12.1
-Erlang 24.0
+Available memory: 16 GB
+Elixir 1.13.4
+Erlang 25.0
 
 Benchmark suite executing with the following configuration:
 warmup: 2 s
@@ -18,11 +18,11 @@ Benchmarking Enumancer map/2...
 Benchmarking for...
 
 Name                      ips        average  deviation         median         99th %
-Enumancer map/2     1067.71 K        0.94 μs  ±2819.27%        0.75 μs        1.51 μs
-Enum.map/2           697.13 K        1.43 μs  ±1848.19%        1.19 μs        2.87 μs
-for                  636.50 K        1.57 μs  ±1717.61%        1.33 μs        2.82 μs
+Enumancer map/2        2.88 M      346.74 ns  ±7584.66%         291 ns         458 ns
+for                    1.70 M      587.21 ns  ±3021.03%         541 ns         792 ns
+Enum.map/2             1.00 M      996.19 ns  ±1192.58%         917 ns        1208 ns
 
 Comparison: 
-Enumancer map/2     1067.71 K
-Enum.map/2           697.13 K - 1.53x slower +0.50 μs
-for                  636.50 K - 1.68x slower +0.63 μs
+Enumancer map/2        2.88 M
+for                    1.70 M - 1.69x slower +240.47 ns
+Enum.map/2             1.00 M - 2.87x slower +649.44 ns

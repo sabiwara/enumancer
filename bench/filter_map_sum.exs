@@ -32,7 +32,7 @@ end
 
 Benchee.run(%{
   "1. Enum" => fn -> Bench.enum(list) end,
-  "2. Stream" => fn ->Bench.stream(list) end,
-  "3. for comprehension" => fn ->Bench.comprehension(list) end,
+  "2. Stream" => fn -> Bench.stream(list) end,
+  "3. for comprehension" => fn -> Bench.comprehension(list) end,
   "4. Enumancer" => fn -> Bench.enumancer(list) end,
 })

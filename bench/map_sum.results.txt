@@ -1,9 +1,9 @@
-Operating System: Linux
-CPU Information: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
+Operating System: macOS
+CPU Information: Apple M1
 Number of Available Cores: 8
-Available memory: 15.41 GB
-Elixir 1.12.1
-Erlang 24.0
+Available memory: 16 GB
+Elixir 1.13.4
+Erlang 25.0
 
 Benchmark suite executing with the following configuration:
 warmup: 2 s
@@ -19,13 +19,13 @@ Benchmarking Enumancer map/2 |> sum/1...
 Benchmarking Stream.map/2 |> Enum.sum/1...
 
 Name                                 ips        average  deviation         median         99th %
-Enumancer map/2 |> sum/1       3154.66 K        0.32 μs  ±1085.13%        0.28 μs        0.67 μs
-Enum.reduce/3                   921.54 K        1.09 μs  ±1511.62%        0.94 μs        2.32 μs
-Enum.map/2 |> Enum.sum/1        606.39 K        1.65 μs  ±1653.51%        1.35 μs        3.04 μs
-Stream.map/2 |> Enum.sum/1      188.92 K        5.29 μs   ±312.88%        4.66 μs       12.16 μs
+Enumancer map/2 |> sum/1          6.26 M       0.160 μs  ±1221.89%       0.166 μs        0.25 μs
+Enum.reduce/3                     2.59 M        0.39 μs  ±4322.22%        0.33 μs        0.54 μs
+Enum.map/2 |> Enum.sum/1          0.87 M        1.15 μs  ±1374.12%        1.08 μs        1.42 μs
+Stream.map/2 |> Enum.sum/1        0.79 M        1.27 μs  ±1289.92%        1.08 μs        2.42 μs
 
 Comparison: 
-Enumancer map/2 |> sum/1       3154.66 K
-Enum.reduce/3                   921.54 K - 3.42x slower +0.77 μs
-Enum.map/2 |> Enum.sum/1        606.39 K - 5.20x slower +1.33 μs
-Stream.map/2 |> Enum.sum/1      188.92 K - 16.70x slower +4.98 μs
+Enumancer map/2 |> sum/1          6.26 M
+Enum.reduce/3                     2.59 M - 2.42x slower +0.23 μs
+Enum.map/2 |> Enum.sum/1          0.87 M - 7.21x slower +0.99 μs
+Stream.map/2 |> Enum.sum/1        0.79 M - 7.95x slower +1.11 μs

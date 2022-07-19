@@ -1,9 +1,9 @@
-Operating System: Linux
-CPU Information: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
+Operating System: macOS
+CPU Information: Apple M1
 Number of Available Cores: 8
-Available memory: 15.41 GB
-Elixir 1.12.1
-Erlang 24.0
+Available memory: 16 GB
+Elixir 1.13.4
+Erlang 25.0
 
 Benchmark suite executing with the following configuration:
 warmup: 2 s
@@ -19,13 +19,13 @@ Benchmarking 3. for comprehension...
 Benchmarking 4. Enumancer...
 
 Name                           ips        average  deviation         median         99th %
-4. Enumancer              583.65 K        1.71 μs   ±165.48%        1.51 μs        3.07 μs
-3. for comprehension      480.21 K        2.08 μs   ±631.30%        1.80 μs        4.68 μs
-1. Enum                   340.03 K        2.94 μs   ±613.52%        2.52 μs        6.26 μs
-2. Stream                 180.78 K        5.53 μs   ±277.10%        4.81 μs       18.95 μs
+4. Enumancer                2.43 M        0.41 μs  ±2807.64%        0.38 μs        0.54 μs
+3. for comprehension        1.95 M        0.51 μs  ±3328.40%        0.46 μs        0.63 μs
+2. Stream                   0.74 M        1.36 μs  ±1290.93%        1.17 μs        2.29 μs
+1. Enum                     0.73 M        1.36 μs   ±784.93%        1.29 μs        1.63 μs
 
 Comparison: 
-4. Enumancer              583.65 K
-3. for comprehension      480.21 K - 1.22x slower +0.37 μs
-1. Enum                   340.03 K - 1.72x slower +1.23 μs
-2. Stream                 180.78 K - 3.23x slower +3.82 μs
+4. Enumancer                2.43 M
+3. for comprehension        1.95 M - 1.24x slower +0.100 μs
+2. Stream                   0.74 M - 3.29x slower +0.94 μs
+1. Enum                     0.73 M - 3.31x slower +0.95 μs

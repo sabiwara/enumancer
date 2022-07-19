@@ -1,9 +1,9 @@
-Operating System: Linux
-CPU Information: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
+Operating System: macOS
+CPU Information: Apple M1
 Number of Available Cores: 8
-Available memory: 15.41 GB
-Elixir 1.12.1
-Erlang 24.0
+Available memory: 16 GB
+Elixir 1.13.4
+Erlang 25.0
 
 Benchmark suite executing with the following configuration:
 warmup: 2 s
@@ -19,13 +19,13 @@ Benchmarking Stream.filter/2 |> Enum.map/2...
 Benchmarking for...
 
 Name                                    ips        average  deviation         median         99th %
-Enumancer filter/2 |> map/2        551.98 K        1.81 μs  ±1085.74%        1.61 μs        2.88 μs
-for                                458.64 K        2.18 μs   ±937.76%        1.91 μs        4.05 μs
-Enum.filter/2 |> Enum.map/2        355.08 K        2.82 μs   ±625.89%        2.44 μs        5.83 μs
-Stream.filter/2 |> Enum.map/2      168.29 K        5.94 μs   ±178.22%        5.33 μs       14.31 μs
+Enumancer filter/2 |> map/2          1.94 M        0.51 μs  ±3622.16%        0.46 μs        0.63 μs
+for                                  1.76 M        0.57 μs  ±3468.94%        0.50 μs        0.67 μs
+Enum.filter/2 |> Enum.map/2          0.78 M        1.28 μs  ±1019.75%        1.21 μs        1.54 μs
+Stream.filter/2 |> Enum.map/2        0.71 M        1.42 μs  ±1050.23%        1.25 μs        2.17 μs
 
 Comparison: 
-Enumancer filter/2 |> map/2        551.98 K
-for                                458.64 K - 1.20x slower +0.37 μs
-Enum.filter/2 |> Enum.map/2        355.08 K - 1.55x slower +1.00 μs
-Stream.filter/2 |> Enum.map/2      168.29 K - 3.28x slower +4.13 μs
+Enumancer filter/2 |> map/2          1.94 M
+for                                  1.76 M - 1.11x slower +0.0550 μs
+Enum.filter/2 |> Enum.map/2          0.78 M - 2.49x slower +0.77 μs
+Stream.filter/2 |> Enum.map/2        0.71 M - 2.76x slower +0.90 μs
