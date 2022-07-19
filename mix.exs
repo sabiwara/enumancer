@@ -16,6 +16,7 @@ defmodule Enumancer.MixProject do
         "hex.publish": :docs,
         dialyzer: :test
       ],
+      dialyzer: [flags: [:missing_return, :extra_return]],
 
       # hex
       description: "Elixir macros to effortlessly define highly optimized Enum pipelines",
