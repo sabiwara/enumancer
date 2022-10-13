@@ -33,7 +33,7 @@ defmodule Enumancer.MixProject do
   defp deps do
     [
       # doc, benchs
-      {:ex_doc, "~> 0.25.0", only: :docs, runtime: false},
+      {:ex_doc, "~> 0.28", only: :docs, runtime: false},
       {:benchee, "~> 1.0", only: :bench, runtime: false},
       # CI
       {:dialyxir, "~> 1.0", only: :test, runtime: false}
