@@ -275,7 +275,9 @@ defmodule Enumancer do
   end
 
   defp parse_body({:|>, _, _} = pipe, enum_arg_name, caller, acc, extra_args) do
-    Macro.expand_once(pipe, caller) |> parse_body(enum_arg_name, caller, acc, extra_args)
+    pipe
+    |> expand_pipe()
+    |> parse_body(enum_arg_name, caller, acc, extra_args)
   end
 
   defp parse_body(
@@ -507,6 +509,11 @@ defmodule Enumancer do
 
   defp parse_call({:., _, [{:__aliases__, _, [:MapSet]}, :new]}, []) do
     {:last_only, MapSet}
+  end
+
+  defp expand_pipe({:|>, _, _} = node) do
+    [{first, 0} | tail] = Macro.unpipe(node)
+    Enum.reduce(tail, first, fn {ast, 0}, acc -> Macro.pipe(acc, ast, 0) end)
   end
 
   defp define_next_acc([{:map, fun} | rest], vars) do
