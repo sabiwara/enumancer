@@ -83,7 +83,7 @@ in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:enumancer, "~> 0.0.2"}
+    {:enumancer, "~> 0.0.3"}
   ]
 end
 ```
