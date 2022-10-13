@@ -88,14 +88,6 @@ def deps do
 end
 ```
 
-Or, if you are using Elixir 1.12, you can just try it out from `iex` or an
-`.exs` script:
-
-```elixir
-iex> Mix.install([:enumancer])
-:ok
-```
-
 The documentation can be found at
 [https://hexdocs.pm/enumancer](https://hexdocs.pm/enumancer).
 
