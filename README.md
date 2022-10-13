@@ -121,23 +121,27 @@ intermediate lists while we only need to keep an integer as accumulator.
 A possibile alternative could be to rewrite this using streams to avoid the
 intermediate structures:
 
-      def sum_odd_squares_2(list) do
-        list
-        |> Stream.filter(&rem(&1, 2) == 1)
-        |> Stream.map(& &1 * &1)
-        |> Enum.sum()
-      end
+```elixir
+def sum_odd_squares_2(list) do
+  list
+  |> Stream.filter(&rem(&1, 2) == 1)
+  |> Stream.map(& &1 * &1)
+  |> Enum.sum()
+end
+```
 
 However, streams come with their own overhead and this might not be that fast in
 practice: don't be surprised if your code suddenly got 3 times slower!
 
 The better alternative in this case would probably be to use a comprehension:
 
-      def sum_odd_squares_3(list) do
-        for x <- list, rem(x, 2) == 1, reduce: 0 do
-          acc -> acc + x * x
-        end
-      end
+```elixir
+def sum_odd_squares_3(list) do
+  for x <- list, rem(x, 2) == 1, reduce: 0 do
+    acc -> acc + x * x
+  end
+end
+```
 
 But comprehensions can be harder to compose and offer less possibilities than
 the `Enum` module. What if you wanted to use `Enum.join/2` instead of
@@ -150,33 +154,37 @@ accumulator initiallized to `0`.
 Finally, the fastest option would be to write a dedicated recursive function
 optimized for this use case:
 
-      def sum_odd_squares_4(list) do
-        do_sum_odd_squares_list(list, 0)
-      end
+```elixir
+def sum_odd_squares_4(list) do
+  do_sum_odd_squares_list(list, 0)
+end
 
-      defp do_sum_odd_squares_list([], acc), do: acc
-      defp do_sum_odd_squares_list([head | tail], acc) do
-        acc =
-          if rem(head, 2) == 1 do
-            acc = acc + head * head
-          else
-            acc
-          end
+defp do_sum_odd_squares_list([], acc), do: acc
+defp do_sum_odd_squares_list([head | tail], acc) do
+  acc =
+    if rem(head, 2) == 1 do
+      acc = acc + head * head
+    else
+      acc
+    end
 
-        do_sum_odd_squares_list(tail, acc)
-      end
+  do_sum_odd_squares_list(tail, acc)
+end
+```
 
 While this is the best option performance-wise, you would need to sacrifice
 readability and maintainability, making the tradeoff less attractive.
 
 With the `defenum/2` macro, you would just write
 
-      defenum sum_odd_squares_5(list) do
-        list
-        |> filter(&rem(&1, 2) == 1)
-        |> map(& &1 * &1)
-        |> sum()
-      end
+```elixir
+defenum sum_odd_squares_5(list) do
+  list
+  |> filter(&rem(&1, 2) == 1)
+  |> map(& &1 * &1)
+  |> sum()
+end
+```
 
 and this would basically transpile to the previous recursive version.
 
