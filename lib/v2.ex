@@ -97,6 +97,61 @@ defmodule V2 do
   """
   def_enum uniq(enumerable)
 
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.dedup([1, 2, 2, 3, 3, 1, 3])
+      [1, 2, 3, 1, 3]
+
+  """
+  def_enum dedup(enumerable)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.drop(1..10, 5)
+      [6, 7, 8, 9, 10]
+
+  """
+  def_enum drop(enumerable, amount)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.reverse(1..3)
+      [3, 2, 1]
+
+  """
+  def_enum reverse(enumerable)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.reverse(1..3, 4..6)
+      [3, 2, 1, 4, 5, 6]
+
+  """
+  def_enum reverse(enumerable, tail)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.sort([4, 1, 5, 2, 3])
+      [1, 2, 3, 4, 5]
+
+  """
+  def_enum sort(enumerable)
+
   defmacro def(foo, bar) do
     Macro.to_string([foo, bar])
   end

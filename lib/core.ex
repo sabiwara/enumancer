@@ -108,6 +108,12 @@ defmodule V2.Core do
   defp transform_step({:join, _meta, []}), do: V2.Join.new()
   defp transform_step({:join, _meta, [joiner]}), do: V2.Join.new(joiner)
   defp transform_step({:uniq, _meta, []}), do: V2.Uniq.new()
+  defp transform_step({:dedup, _meta, []}), do: V2.Dedup.new()
+  defp transform_step({:drop, _meta, [amount]}), do: V2.Drop.new(amount)
+  defp transform_step({:reverse, _meta, []}), do: V2.Reverse.new()
+  defp transform_step({:reverse, _meta, [tail]}), do: V2.Reverse.new(tail)
+  defp transform_step({:sort, _meta, []}), do: V2.Sort.new()
+  defp transform_step({:sort, _meta, [sorter]}), do: V2.Sort.new(sorter)
 
   defp transform_step(ast) do
     {fun_with_arity, line} = fun_arity_and_line(ast)

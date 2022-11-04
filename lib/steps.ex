@@ -207,3 +207,162 @@ defmodule V2.Dedup do
 
   def new, do: %__MODULE__{previous: Macro.unique_var(:previous, nil)}
 end
+
+defimpl V2.Step, for: V2.Dedup do
+  def position(_), do: :anywhere
+
+  def extra_args(%V2.Dedup{previous: previous}), do: [previous]
+
+  def init(%V2.Dedup{previous: previous}) do
+    quote do: unquote(previous) = :__ENUMANCER_RESERVED__
+  end
+
+  def initial_acc(_), do: []
+
+  def define_next_acc(%V2.Dedup{previous: previous}, vars, continue) do
+    quote do
+      case unquote(vars.head) do
+        ^unquote(previous) ->
+          unquote(vars.composite_acc)
+
+        _ ->
+          unquote(previous) = unquote(vars.head)
+          unquote(continue)
+      end
+    end
+  end
+
+  def return_acc(_, vars) do
+    quote do
+      [unquote(vars.head) | unquote(vars.acc)]
+    end
+  end
+
+  def wrap(_, ast) do
+    quote do: :lists.reverse(unquote(ast))
+  end
+end
+
+defmodule V2.Drop do
+  @enforce_keys [:amount_var, :value]
+  defstruct @enforce_keys
+
+  def new(amount) do
+    %__MODULE__{
+      amount_var: Macro.unique_var(:amount, nil),
+      value: amount
+    }
+  end
+end
+
+defimpl V2.Step, for: V2.Drop do
+  def position(_), do: :anywhere
+
+  def extra_args(%V2.Drop{amount_var: amount}), do: [amount]
+
+  def init(%V2.Drop{amount_var: amount, value: value}) do
+    quote do
+      unquote(amount) =
+        case unquote(value) do
+          amount when is_integer(amount) and amount > 0 -> amount
+        end
+    end
+  end
+
+  def initial_acc(_), do: []
+
+  def define_next_acc(%V2.Drop{amount_var: amount}, vars, continue) do
+    quote do
+      case unquote(amount) do
+        amount when amount > 0 ->
+          unquote(amount) = amount - 1
+          unquote(vars.composite_acc)
+
+        _ ->
+          unquote(continue)
+      end
+    end
+  end
+
+  def return_acc(_, vars) do
+    quote do
+      [unquote(vars.head) | unquote(vars.acc)]
+    end
+  end
+
+  def wrap(_, ast) do
+    quote do: :lists.reverse(unquote(ast))
+  end
+end
+
+defmodule V2.Reverse do
+  @enforce_keys [:tail]
+  defstruct @enforce_keys
+
+  def new(tail \\ []) do
+    %__MODULE__{tail: tail}
+  end
+end
+
+defimpl V2.Step, for: V2.Reverse do
+  def position(_), do: :anywhere
+
+  def extra_args(%V2.Reverse{}), do: []
+
+  def init(_), do: nil
+
+  def initial_acc(%V2.Reverse{tail: tail}) do
+    if is_list(tail) do
+      tail
+    else
+      quote do: Enum.to_list(unquote(tail))
+    end
+  end
+
+  def define_next_acc(_, _vars, continue), do: continue
+
+  def return_acc(_, vars) do
+    quote do
+      [unquote(vars.head) | unquote(vars.acc)]
+    end
+  end
+
+  def wrap(_, ast), do: ast
+end
+
+defmodule V2.Sort do
+  # TODO: optimization: if only step, optimize by removing the loop
+  # since this is a wrap only step!
+
+  @enforce_keys [:sorter]
+  defstruct @enforce_keys
+
+  def new(sorter \\ :asc) do
+    %__MODULE__{sorter: sorter}
+  end
+end
+
+defimpl V2.Step, for: V2.Sort do
+  def position(_), do: :anywhere
+
+  def extra_args(_), do: []
+
+  def init(_), do: nil
+
+  def initial_acc(_), do: []
+
+  def define_next_acc(_, _vars, continue), do: continue
+
+  def return_acc(_, vars) do
+    quote do
+      [unquote(vars.head) | unquote(vars.acc)]
+    end
+  end
+
+  def wrap(%V2.Sort{sorter: sorter}, ast) do
+    case sorter do
+      :asc -> quote do: Enum.sort(unquote(ast))
+      _ -> quote do: Enum.sort(unquote(ast), unquote(sorter))
+    end
+  end
+end
