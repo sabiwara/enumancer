@@ -27,12 +27,13 @@ defmodule Enumancer do
       iex> E.map(-5..6, &abs/1) |> E.uniq() |> E.filter(& &1 > 2)
       [5, 4, 3, 6]
 
-      iex> E.map(1..99999999, & &1 * &1) |> E.take(5) |> E.explain()
+      iex> E.map(1..99999999, & &1 * &1) |> E.take(5)
       [1, 4, 9, 16, 25]
 
   """
 
   import Enumancer.Core
+  import Enumancer.MacroHelpers
 
   @doc """
   .
@@ -142,6 +143,38 @@ defmodule Enumancer do
   @doc """
   .
 
+  Negative indexes are **NOT** supported, since this would imply to
+  load the whole list and therefore cannot be done lazily.
+
+  ## Examples
+
+      iex> E.at(1..1000, 5)
+      6
+      iex> E.at(1..1000, 1000)
+      nil
+
+  """
+  def_enum at(enumerable, index)
+
+  @doc """
+  .
+
+  Negative indexes are **NOT** supported, since this would imply to
+  load the whole list and therefore cannot be done lazily.
+
+  ## Examples
+
+      iex> E.at(1..1000, 5, :none)
+      6
+      iex> E.at(1..1000, 1000, :none)
+      :none
+
+  """
+  def_enum at(enumerable, index, default)
+
+  @doc """
+  .
+
   ## Examples
 
       iex> E.reverse(1..3)
@@ -177,7 +210,7 @@ defmodule Enumancer do
 
   ## Examples
 
-      iex> E.concat([1..3, 4..6]) |> E.explain()
+      iex> E.concat([1..3, 4..6])
       [1, 2, 3, 4, 5, 6]
 
   """
@@ -188,7 +221,7 @@ defmodule Enumancer do
 
   ## Examples
 
-      iex> E.flat_map(1..3, fn n -> 1..n end) |> E.explain()
+      iex> E.flat_map(1..3, fn n -> 1..n end)
       [1, 1, 2, 1, 2, 3]
 
   """

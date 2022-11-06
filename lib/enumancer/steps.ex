@@ -19,7 +19,6 @@ end
 defimpl Enumancer.Step, for: Enumancer.Map do
   def spec(_), do: %Enumancer.StepSpec{}
 
-  def extra_args(_), do: []
   def init(_), do: nil
   def initial_acc(_), do: []
 
@@ -303,8 +302,6 @@ end
 defimpl Enumancer.Step, for: Enumancer.Drop do
   def spec(%Enumancer.Drop{amount_var: amount}), do: %Enumancer.StepSpec{extra_args: [amount]}
 
-  def extra_args(%Enumancer.Drop{amount_var: amount}), do: [amount]
-
   def init(%Enumancer.Drop{amount_var: amount, value: value, line: line}) do
     quote line: line do
       unquote(amount) = Enumancer.Drop.validate_amount(unquote(value))
@@ -334,6 +331,59 @@ defimpl Enumancer.Step, for: Enumancer.Drop do
 
   def wrap(_, ast) do
     quote do: :lists.reverse(unquote(ast))
+  end
+end
+
+defmodule Enumancer.At do
+  @enforce_keys [:index, :default]
+  defstruct @enforce_keys
+
+  def new(index, default \\ nil) do
+    %__MODULE__{
+      index: index,
+      default: default
+    }
+  end
+
+  def validate_index(index) when is_integer(index) and index >= 0, do: index
+end
+
+defimpl Enumancer.Step, for: Enumancer.At do
+  def spec(_) do
+    %Enumancer.StepSpec{halt: true}
+  end
+
+  def init(_), do: nil
+
+  def initial_acc(%Enumancer.At{index: index}) do
+    quote do
+      Enumancer.At.validate_index(unquote(index))
+    end
+  end
+
+  def define_next_acc(_, vars, continue) do
+    quote do
+      case unquote(vars.acc) do
+        index when index > 0 ->
+          unquote(vars.acc) = index - 1
+          unquote(continue)
+
+        _ ->
+          unquote(vars.acc) = {:ok, unquote(vars.head)}
+          {:__ENUMANCER_HALT__, unquote(vars.composite_acc)}
+      end
+    end
+  end
+
+  def return_acc(_, vars), do: vars.acc
+
+  def wrap(%Enumancer.At{default: default}, ast) do
+    quote do
+      case unquote(ast) do
+        {:ok, found} -> found
+        index when is_integer(index) -> unquote(default)
+      end
+    end
   end
 end
 
@@ -438,5 +488,32 @@ defimpl Enumancer.Step, for: Enumancer.FlatMap do
 
   def wrap(_, ast) do
     quote do: :lists.reverse(unquote(ast))
+  end
+end
+
+defmodule Enumancer.Steps do
+  alias Enumancer.MacroHelpers
+
+  def transform_step({:map, _meta, [fun]}), do: %Enumancer.Map{fun: fun}
+  def transform_step({:filter, _meta, [fun]}), do: %Enumancer.Filter{fun: fun}
+  def transform_step({:sum, _meta, []}), do: %Enumancer.Sum{}
+  def transform_step({:join, _meta, []}), do: Enumancer.Join.new()
+  def transform_step({:join, _meta, [joiner]}), do: Enumancer.Join.new(joiner)
+  def transform_step({:uniq, _meta, []}), do: Enumancer.Uniq.new()
+  def transform_step({:dedup, _meta, []}), do: Enumancer.Dedup.new()
+  def transform_step({:take, meta, [amount]}), do: Enumancer.Take.new(amount, meta)
+  def transform_step({:drop, meta, [amount]}), do: Enumancer.Drop.new(amount, meta)
+  def transform_step({:at, meta, [index]}), do: Enumancer.At.new(index)
+  def transform_step({:at, meta, [index, default]}), do: Enumancer.At.new(index, default)
+  def transform_step({:reverse, _meta, []}), do: Enumancer.Reverse.new()
+  def transform_step({:reverse, _meta, [tail]}), do: Enumancer.Reverse.new(tail)
+  def transform_step({:sort, _meta, []}), do: Enumancer.Sort.new()
+  def transform_step({:sort, _meta, [sorter]}), do: Enumancer.Sort.new(sorter)
+  def transform_step({:concat, _meta, []}), do: Enumancer.FlatMap.new()
+  def transform_step({:flat_map, _meta, [fun]}), do: Enumancer.FlatMap.new(fun)
+
+  def transform_step(ast) do
+    {fun_with_arity, line} = MacroHelpers.fun_arity_and_line(ast)
+    raise ArgumentError, "#{line}: Invalid function #{fun_with_arity}"
   end
 end

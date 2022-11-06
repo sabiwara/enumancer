@@ -1,10 +1,7 @@
 defmodule Enumancer.Core do
+  alias Enumancer.MacroHelpers
   alias Enumancer.Step
-
-  def inspect_ast(ast) do
-    ast |> Macro.to_string() |> IO.puts()
-    ast
-  end
+  alias Enumancer.Steps
 
   defmacro def_enum({fun, _, [enum | args]}) do
     quote do
@@ -35,9 +32,9 @@ defmodule Enumancer.Core do
   end
 
   defp split_call(ast = {_, meta, args}, env) when is_list(args) do
-    case normalize_call_function(ast, env) do
+    case MacroHelpers.normalize_call_function(ast, env) do
       {Kernel, :|>, [left, right]} ->
-        case normalize_call_function(right, env) do
+        case MacroHelpers.normalize_call_function(right, env) do
           {Enumancer, fun, args} -> {:ok, left, {fun, meta, args}}
           _ -> :error
         end
@@ -52,83 +49,20 @@ defmodule Enumancer.Core do
 
   defp split_call(_ast, _env), do: :error
 
-  @doc """
-  Resolves the module, function name and arity for a function call AST.
-
-  ## Examples
-
-      iex> normalize_call_function(quote(do: inspect(123)), __ENV__)
-      {Kernel, :inspect, [123]}
-
-      iex> normalize_call_function(quote(do: String.upcase("foo")), __ENV__)
-      {String, :upcase, ["foo"]}
-
-      iex> alias String, as: S
-      iex> normalize_call_function(quote(do: S.upcase("foo")), __ENV__)
-      {String, :upcase, ["foo"]}
-
-      iex> normalize_call_function(quote(do: foo(123)), __ENV__)
-      :error
-
-  """
-  def normalize_call_function({call, _, args}, env) do
-    do_normalize_call_function(call, args, env)
-  end
-
-  defp do_normalize_call_function(name, args, env) when is_atom(name) do
-    arity = length(args)
-
-    case Macro.Env.lookup_import(env, {name, arity}) do
-      [{fun_or_macro, module}] when fun_or_macro in [:function, :macro] -> {module, name, args}
-      _ -> :error
-    end
-  end
-
-  defp do_normalize_call_function({:., _, [{:__aliases__, _, _} = module, fun]}, args, env) do
-    module = Macro.expand(module, env)
-    {module, fun, args}
-  end
-
   defp asts_to_steps([last], acc) do
-    step = transform_step(last)
+    step = Steps.transform_step(last)
     [step | acc]
   end
 
   defp asts_to_steps([head | tail], acc) do
-    step = transform_step(head)
+    step = Steps.transform_step(head)
 
     unless Step.spec(step).collect do
       asts_to_steps(tail, [step | acc])
     else
-      {fun_with_arity, line} = fun_arity_and_line(head)
+      {fun_with_arity, line} = MacroHelpers.fun_arity_and_line(head)
       raise "#{line}: Cannot call #{fun_with_arity} in the middle of a pipeline"
     end
-  end
-
-  defp transform_step({:map, _meta, [fun]}), do: %Enumancer.Map{fun: fun}
-  defp transform_step({:filter, _meta, [fun]}), do: %Enumancer.Filter{fun: fun}
-  defp transform_step({:sum, _meta, []}), do: %Enumancer.Sum{}
-  defp transform_step({:join, _meta, []}), do: Enumancer.Join.new()
-  defp transform_step({:join, _meta, [joiner]}), do: Enumancer.Join.new(joiner)
-  defp transform_step({:uniq, _meta, []}), do: Enumancer.Uniq.new()
-  defp transform_step({:dedup, _meta, []}), do: Enumancer.Dedup.new()
-  defp transform_step({:take, meta, [amount]}), do: Enumancer.Take.new(amount, meta)
-  defp transform_step({:drop, meta, [amount]}), do: Enumancer.Drop.new(amount, meta)
-  defp transform_step({:reverse, _meta, []}), do: Enumancer.Reverse.new()
-  defp transform_step({:reverse, _meta, [tail]}), do: Enumancer.Reverse.new(tail)
-  defp transform_step({:sort, _meta, []}), do: Enumancer.Sort.new()
-  defp transform_step({:sort, _meta, [sorter]}), do: Enumancer.Sort.new(sorter)
-  defp transform_step({:concat, _meta, []}), do: Enumancer.FlatMap.new()
-  defp transform_step({:flat_map, _meta, [fun]}), do: Enumancer.FlatMap.new(fun)
-
-  defp transform_step(ast) do
-    {fun_with_arity, line} = fun_arity_and_line(ast)
-    raise ArgumentError, "#{line}: Invalid function #{fun_with_arity}"
-  end
-
-  defp fun_arity_and_line({fun, meta, args}) do
-    arity = length(args) + 1
-    {"Enumancer.#{fun}/#{arity}", meta[:line]}
   end
 
   defp transpile_pipeline({first, steps = [last | _]}) do
