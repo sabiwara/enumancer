@@ -16,16 +16,16 @@ Estimated total run time: 28 s
 Benchmarking 1. Enum...
 Benchmarking 2. Stream...
 Benchmarking 3. for comprehension...
-Benchmarking 4. Enumancer...
+Benchmarking 4. EnumancerOld...
 
 Name                           ips        average  deviation         median         99th %
-4. Enumancer                2.43 M        0.41 μs  ±2807.64%        0.38 μs        0.54 μs
+4. EnumancerOld                2.43 M        0.41 μs  ±2807.64%        0.38 μs        0.54 μs
 3. for comprehension        1.95 M        0.51 μs  ±3328.40%        0.46 μs        0.63 μs
 2. Stream                   0.74 M        1.36 μs  ±1290.93%        1.17 μs        2.29 μs
 1. Enum                     0.73 M        1.36 μs   ±784.93%        1.29 μs        1.63 μs
 
-Comparison: 
-4. Enumancer                2.43 M
+Comparison:
+4. EnumancerOld                2.43 M
 3. for comprehension        1.95 M - 1.24x slower +0.100 μs
 2. Stream                   0.74 M - 3.29x slower +0.94 μs
 1. Enum                     0.73 M - 3.31x slower +0.95 μs

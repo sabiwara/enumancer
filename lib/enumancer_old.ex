@@ -1,14 +1,14 @@
-defmodule Enumancer do
+defmodule EnumancerOld do
   @moduledoc """
   Macros to effortlessly define highly optimized `Enum` pipelines
 
   ## Overview
 
-  `Enumancer` provides a `defenum/2` macro, which will convert a pipeline of `Enum`
+  `EnumancerOld` provides a `defenum/2` macro, which will convert a pipeline of `Enum`
   function calls to an optimized tail-recursive function.
 
       defmodule BlazingFast do
-        import Enumancer
+        import EnumancerOld
 
         defenum sum_squares(numbers) do
           numbers
@@ -29,7 +29,7 @@ defmodule Enumancer do
   console.
 
   The `defenum_explain/2` approach can be useful if you don't want to take the risk of
-  using `Enumancer` and macros in your production code, but it can inspire the
+  using `EnumancerOld` and macros in your production code, but it can inspire the
   implementation of your optimized recursive functions.
 
   ## Available functions
@@ -47,7 +47,7 @@ defmodule Enumancer do
 
   Also, please note that many functions from the `Enum` module are accepting optional
   callbacks to add an extra map or filter step.
-  By design, `Enumancer` does **not** implement these.
+  By design, `EnumancerOld` does **not** implement these.
   For a very simple reason: the available primitives can be combined at will to
   reproduce them, without any runtime overhead.
 
@@ -111,12 +111,12 @@ defmodule Enumancer do
   A macro transforming a pipeline of `Enum` transformations to an optimized
   recursive function at compile time.
 
-  See `Enumancer` documentation for available functions.
+  See `EnumancerOld` documentation for available functions.
 
   ## Examples
 
       defmodule BlazingFast do
-        import Enumancer
+        import EnumancerOld
 
         defenum sum_odd_squares(numbers) do
           numbers
@@ -335,12 +335,12 @@ defmodule Enumancer do
 
   defp parse_call(:dedup, []) do
     last = Macro.unique_var(:last, nil)
-    {:extra, {:dedup, last}, {last, :__ENUMANCER_RESERVED__}}
+    {:extra, {:dedup, last}, {last, :__EnumancerOld_RESERVED__}}
   end
 
   defp parse_call(:dedup_by, [fun]) do
     last = Macro.unique_var(:last, nil)
-    {:extra, {:dedup_by, last, fun}, {last, :__ENUMANCER_RESERVED__}}
+    {:extra, {:dedup_by, last, fun}, {last, :__EnumancerOld_RESERVED__}}
   end
 
   defp parse_call(:with_index, []) do
@@ -663,7 +663,7 @@ defmodule Enumancer do
   defp reduce_acc([{:reduce, fun}], vars) do
     quote do
       case unquote(vars.acc) do
-        :__ENUMANCER_RESERVED__ ->
+        :__EnumancerOld_RESERVED__ ->
           unquote(vars.head)
 
         acc ->
@@ -811,7 +811,7 @@ defmodule Enumancer do
   defp initial_acc(:count), do: 0
   defp initial_acc(:sum), do: 0
   defp initial_acc(:product), do: 1
-  defp initial_acc({:reduce, _fun}), do: :__ENUMANCER_RESERVED__
+  defp initial_acc({:reduce, _fun}), do: :__EnumancerOld_RESERVED__
   defp initial_acc({:reduce, acc, _fun}), do: acc
   defp initial_acc({:map_reduce, acc, _fun}), do: {[], acc}
   defp initial_acc({:reverse, acc}), do: acc
@@ -832,7 +832,7 @@ defmodule Enumancer do
   defp wrap_result({:reduce, _}, acc_ast) do
     quote do
       case unquote(acc_ast) do
-        :__ENUMANCER_RESERVED__ -> raise Enum.EmptyError
+        :__EnumancerOld_RESERVED__ -> raise Enum.EmptyError
         acc -> acc
       end
     end

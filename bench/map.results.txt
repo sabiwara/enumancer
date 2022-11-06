@@ -14,15 +14,15 @@ inputs: none specified
 Estimated total run time: 21 s
 
 Benchmarking Enum.map/2...
-Benchmarking Enumancer map/2...
+Benchmarking EnumancerOld map/2...
 Benchmarking for...
 
 Name                      ips        average  deviation         median         99th %
-Enumancer map/2        2.88 M      346.74 ns  ±7584.66%         291 ns         458 ns
+EnumancerOld map/2        2.88 M      346.74 ns  ±7584.66%         291 ns         458 ns
 for                    1.70 M      587.21 ns  ±3021.03%         541 ns         792 ns
 Enum.map/2             1.00 M      996.19 ns  ±1192.58%         917 ns        1208 ns
 
-Comparison: 
-Enumancer map/2        2.88 M
+Comparison:
+EnumancerOld map/2        2.88 M
 for                    1.70 M - 1.69x slower +240.47 ns
 Enum.map/2             1.00 M - 2.87x slower +649.44 ns

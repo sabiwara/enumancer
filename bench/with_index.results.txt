@@ -15,14 +15,14 @@ Estimated total run time: 21 s
 
 Benchmarking Enum.with_index |> Enum.map...
 Benchmarking Enum.with_index/2...
-Benchmarking Enumancer...
+Benchmarking EnumancerOld...
 
 Name                                  ips        average  deviation         median         99th %
-Enumancer                       2872.79 K        0.35 μs  ±6662.73%        0.29 μs        0.46 μs
+EnumancerOld                       2872.79 K        0.35 μs  ±6662.73%        0.29 μs        0.46 μs
 Enum.with_index/2                746.48 K        1.34 μs  ±1365.07%        1.21 μs        2.46 μs
 Enum.with_index |> Enum.map      444.57 K        2.25 μs   ±532.76%        2.08 μs        4.42 μs
 
-Comparison: 
-Enumancer                       2872.79 K
+Comparison:
+EnumancerOld                       2872.79 K
 Enum.with_index/2                746.48 K - 3.85x slower +0.99 μs
 Enum.with_index |> Enum.map      444.57 K - 6.46x slower +1.90 μs

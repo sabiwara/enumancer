@@ -15,17 +15,17 @@ Estimated total run time: 28 s
 
 Benchmarking Enum.map/2 |> Enum.max/1...
 Benchmarking Enum.reduce/2...
-Benchmarking Enumancer map/2 |> max/1...
+Benchmarking EnumancerOld map/2 |> max/1...
 Benchmarking Stream.map/2 |> Enum.max/1...
 
 Name                                 ips        average  deviation         median         99th %
-Enumancer map/2 |> max/1          6.27 M       0.160 μs  ±1274.25%       0.166 μs        0.29 μs
+EnumancerOld map/2 |> max/1          6.27 M       0.160 μs  ±1274.25%       0.166 μs        0.29 μs
 Enum.reduce/2                     2.23 M        0.45 μs  ±4512.23%        0.42 μs        0.58 μs
 Enum.map/2 |> Enum.max/1          0.87 M        1.15 μs  ±1126.80%        1.08 μs        1.33 μs
 Stream.map/2 |> Enum.max/1        0.47 M        2.12 μs   ±673.24%        1.88 μs        5.25 μs
 
-Comparison: 
-Enumancer map/2 |> max/1          6.27 M
+Comparison:
+EnumancerOld map/2 |> max/1          6.27 M
 Enum.reduce/2                     2.23 M - 2.81x slower +0.29 μs
 Enum.map/2 |> Enum.max/1          0.87 M - 7.22x slower +0.99 μs
 Stream.map/2 |> Enum.max/1        0.47 M - 13.29x slower +1.96 μs

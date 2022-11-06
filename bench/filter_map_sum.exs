@@ -1,7 +1,7 @@
 list = Enum.to_list(1..100)
 
 defmodule Bench do
-  import Enumancer
+  import EnumancerOld
 
   def enum(list) do
     list
@@ -34,5 +34,5 @@ Benchee.run(%{
   "1. Enum" => fn -> Bench.enum(list) end,
   "2. Stream" => fn -> Bench.stream(list) end,
   "3. for comprehension" => fn -> Bench.comprehension(list) end,
-  "4. Enumancer" => fn -> Bench.enumancer(list) end,
+  "4. EnumancerOld" => fn -> Bench.enumancer(list) end,
 })

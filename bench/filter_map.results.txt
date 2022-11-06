@@ -14,18 +14,18 @@ inputs: none specified
 Estimated total run time: 28 s
 
 Benchmarking Enum.filter/2 |> Enum.map/2...
-Benchmarking Enumancer filter/2 |> map/2...
+Benchmarking EnumancerOld filter/2 |> map/2...
 Benchmarking Stream.filter/2 |> Enum.map/2...
 Benchmarking for...
 
 Name                                    ips        average  deviation         median         99th %
-Enumancer filter/2 |> map/2          1.94 M        0.51 μs  ±3622.16%        0.46 μs        0.63 μs
+EnumancerOld filter/2 |> map/2          1.94 M        0.51 μs  ±3622.16%        0.46 μs        0.63 μs
 for                                  1.76 M        0.57 μs  ±3468.94%        0.50 μs        0.67 μs
 Enum.filter/2 |> Enum.map/2          0.78 M        1.28 μs  ±1019.75%        1.21 μs        1.54 μs
 Stream.filter/2 |> Enum.map/2        0.71 M        1.42 μs  ±1050.23%        1.25 μs        2.17 μs
 
-Comparison: 
-Enumancer filter/2 |> map/2          1.94 M
+Comparison:
+EnumancerOld filter/2 |> map/2          1.94 M
 for                                  1.76 M - 1.11x slower +0.0550 μs
 Enum.filter/2 |> Enum.map/2          0.78 M - 2.49x slower +0.77 μs
 Stream.filter/2 |> Enum.map/2        0.71 M - 2.76x slower +0.90 μs
