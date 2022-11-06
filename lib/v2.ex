@@ -21,11 +21,14 @@ defmodule V2 do
       iex> "abc" |> String.graphemes() |> E.map(& &1 <> &1) |> E.join("-") |> String.upcase()
       "AA-BB-CC"
 
-      iex> V2.map(-5..6, &abs/1) |> V2.uniq()
+      iex> E.map(-5..6, &abs/1) |> E.uniq()
       [5, 4, 3, 2, 1, 0, 6]
 
-      iex> V2.map(-5..6, &abs/1) |> V2.uniq() |> V2.filter(& &1 > 2)
+      iex> E.map(-5..6, &abs/1) |> E.uniq() |> E.filter(& &1 > 2)
       [5, 4, 3, 6]
+
+      iex> E.map(1..99999999, & &1 * &1) |> E.take(5) |> E.explain()
+      [1, 4, 9, 16, 25]
 
   """
 
@@ -113,6 +116,23 @@ defmodule V2 do
 
   ## Examples
 
+      iex> E.take(1..1000, 5)
+      [1, 2, 3, 4, 5]
+
+  Negative indexes are **NOT** supported, since this would imply to
+  load the whole list and therefore cannot be done lazily.
+
+      iex> E.take(1..1000, -5)
+      ** (CaseClauseError) no case clause matching: -5
+
+  """
+  def_enum take(enumerable, amount)
+
+  @doc """
+  .
+
+  ## Examples
+
       iex> E.drop(1..10, 5)
       [6, 7, 8, 9, 10]
 
@@ -167,6 +187,13 @@ defmodule V2.Sample do
   E.def sum_squares(enumerable) do
     enumerable
     |> E.map(&(&1 * &1))
+    |> E.sum()
+  end
+
+  def sum_squares2(enumerable) do
+    enumerable
+    |> E.map(&(&1 * &1))
+    |> E.take(-5)
     |> E.sum()
   end
 end

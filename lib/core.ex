@@ -6,30 +6,35 @@ defmodule V2.Core do
     ast
   end
 
-  defmacro def_enum({fun, meta, [enum | args]}) do
+  defmacro def_enum({fun, _, [enum | args]}) do
     quote do
       defmacro unquote(fun)(unquote_splicing([enum | args])) do
-        pipeline(unquote(enum), __CALLER__, [{unquote(fun), unquote(meta), unquote(args)}])
+        meta = Macro.Env.location(__CALLER__)
+        pipeline(unquote(enum), __CALLER__, [{unquote(fun), meta, unquote(args)}])
       end
     end
   end
 
   def pipeline(ast, env, acc) do
-    {first, raw_steps} = extract_pipeline(ast, env, acc)
-
-    raw_steps
-    |> prepare_pipeline([])
-    |> transpile_pipeline(first)
+    ast
+    |> prepare_pipeline(env, acc)
+    |> transpile_pipeline()
   end
 
-  defp extract_pipeline(ast, env, acc) do
+  def prepare_pipeline(ast, env, acc) do
+    {first, asts} = extract_pipeline_asts(ast, env, acc)
+    steps = asts_to_steps(asts, [])
+    {first, steps}
+  end
+
+  defp extract_pipeline_asts(ast, env, acc) do
     case split_call(ast, env) do
-      {:ok, arg, step} -> extract_pipeline(arg, env, [step | acc])
+      {:ok, arg, step} -> extract_pipeline_asts(arg, env, [step | acc])
       :error -> {ast, acc}
     end
   end
 
-  defp split_call(ast = {_, meta, _}, env) do
+  defp split_call(ast = {_, meta, args}, env) when is_list(args) do
     case normalize_call_function(ast, env) do
       {Kernel, :|>, [left, right]} ->
         case normalize_call_function(right, env) do
@@ -79,26 +84,24 @@ defmodule V2.Core do
     end
   end
 
-  defp do_normalize_call_function({:., _, [{:__aliases__, meta, modules}, fun]}, args, _env) do
-    module = meta[:alias] || Module.concat(modules)
+  defp do_normalize_call_function({:., _, [{:__aliases__, _, _} = module, fun]}, args, env) do
+    module = Macro.expand(module, env)
     {module, fun, args}
   end
 
-  defp prepare_pipeline([last], acc) do
+  defp asts_to_steps([last], acc) do
     step = transform_step(last)
     [step | acc]
   end
 
-  defp prepare_pipeline([head | tail], acc) do
+  defp asts_to_steps([head | tail], acc) do
     step = transform_step(head)
 
-    case Step.position(step) do
-      :anywhere ->
-        prepare_pipeline(tail, [step | acc])
-
-      :last ->
-        {fun_with_arity, line} = fun_arity_and_line(head)
-        raise "#{line}: Cannot call #{fun_with_arity} in the middle of a pipeline"
+    unless Step.spec(step).collect do
+      asts_to_steps(tail, [step | acc])
+    else
+      {fun_with_arity, line} = fun_arity_and_line(head)
+      raise "#{line}: Cannot call #{fun_with_arity} in the middle of a pipeline"
     end
   end
 
@@ -109,7 +112,8 @@ defmodule V2.Core do
   defp transform_step({:join, _meta, [joiner]}), do: V2.Join.new(joiner)
   defp transform_step({:uniq, _meta, []}), do: V2.Uniq.new()
   defp transform_step({:dedup, _meta, []}), do: V2.Dedup.new()
-  defp transform_step({:drop, _meta, [amount]}), do: V2.Drop.new(amount)
+  defp transform_step({:take, meta, [amount]}), do: V2.Take.new(amount, meta)
+  defp transform_step({:drop, meta, [amount]}), do: V2.Drop.new(amount, meta)
   defp transform_step({:reverse, _meta, []}), do: V2.Reverse.new()
   defp transform_step({:reverse, _meta, [tail]}), do: V2.Reverse.new(tail)
   defp transform_step({:sort, _meta, []}), do: V2.Sort.new()
@@ -125,7 +129,7 @@ defmodule V2.Core do
     {"Enumancer.#{fun}/#{arity}", meta[:line]}
   end
 
-  defp transpile_pipeline(steps = [last | _], first) do
+  defp transpile_pipeline({first, steps = [last | _]}) do
     vars = init_vars(steps)
 
     initial_acc = Step.initial_acc(last)
@@ -143,12 +147,19 @@ defmodule V2.Core do
 
     inits = for step <- steps, init = Step.init(step), do: init
 
+    {module, reduce_fun} =
+      if Enum.any?(steps, &Step.spec(&1).halt) do
+        {__MODULE__, :reduce_while}
+      else
+        {Enum, :reduce}
+      end
+
     quote do
       unquote_splicing(inits)
       unquote(vars.acc) = unquote(initial_acc)
 
       unquote(vars.composite_acc) =
-        Enum.reduce(unquote(first), unquote(vars.composite_acc), fn
+        unquote(module).unquote(reduce_fun)(unquote(first), unquote(vars.composite_acc), fn
           unquote(vars.head), unquote(vars.composite_acc) -> unquote(body)
         end)
 
@@ -156,8 +167,16 @@ defmodule V2.Core do
     end
   end
 
+  defp reduce_block(steps, args) do
+    if Enum.any?(steps, &Step.spec(&1).halt) do
+      quote do: reduce_while(unquote_splicing(args))
+    else
+      quote do: Enum.reduce(unquote_splicing(args))
+    end
+  end
+
   defp init_vars(steps) do
-    extra_args = Enum.flat_map(steps, &Step.extra_args(&1))
+    extra_args = Enum.flat_map(steps, &Step.spec(&1).extra_args)
 
     [:head, :tail, :acc]
     |> Map.new(&{&1, Macro.unique_var(&1, nil)})
@@ -178,5 +197,34 @@ defmodule V2.Core do
 
   defp build_body(step, continue, vars) do
     Step.define_next_acc(step, vars, continue)
+  end
+
+  @compile {:inline, reduce_while_list: 3, reduce_while_range: 5}
+
+  def reduce_while(enumerable, acc, fun) when is_function(fun, 2) do
+    case enumerable do
+      list when is_list(list) -> reduce_while_list(list, acc, fun)
+      start..stop//step -> reduce_while_range(start, stop, step, acc, fun)
+    end
+  end
+
+  defp reduce_while_list([], acc, _fun), do: acc
+
+  defp reduce_while_list([h | t], acc, fun) do
+    case fun.(h, acc) do
+      {:__ENUMANCER_HALT__, acc} -> acc
+      acc -> reduce_while_list(t, acc, fun)
+    end
+  end
+
+  defp reduce_while_range(start, stop, step, acc, _fun)
+       when (step > 0 and start > stop) or (step < 0 and start < stop),
+       do: acc
+
+  defp reduce_while_range(start, stop, step, acc, fun) do
+    case fun.(start, acc) do
+      {:__ENUMANCER_HALT__, acc} -> acc
+      acc -> reduce_while_range(start + step, stop, step, acc, fun)
+    end
   end
 end

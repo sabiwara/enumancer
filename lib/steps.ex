@@ -1,11 +1,9 @@
 defmodule V2.StepSpec do
-  @enforce_keys [:fun]
-  defstruct @enforce_keys
+  defstruct collect: false, extra_args: [], halt: false
 end
 
 defprotocol V2.Step do
-  def position(step)
-  def extra_args(step)
+  def spec(step)
   def init(step)
   def initial_acc(step)
   def define_next_acc(step, vars, continue)
@@ -19,7 +17,7 @@ defmodule V2.Map do
 end
 
 defimpl V2.Step, for: V2.Map do
-  def position(_), do: :anywhere
+  def spec(_), do: %V2.StepSpec{}
 
   def extra_args(_), do: []
   def init(_), do: nil
@@ -49,9 +47,8 @@ defmodule V2.Filter do
 end
 
 defimpl V2.Step, for: V2.Filter do
-  def position(_), do: :anywhere
+  def spec(_), do: %V2.StepSpec{}
 
-  def extra_args(_), do: []
   def init(_), do: nil
   def initial_acc(_), do: []
 
@@ -83,9 +80,8 @@ defmodule V2.Sum do
 end
 
 defimpl V2.Step, for: V2.Sum do
-  def position(_), do: :last
+  def spec(_), do: %V2.StepSpec{collect: true}
 
-  def extra_args(_), do: []
   def init(_), do: nil
   def initial_acc(_), do: 0
 
@@ -110,9 +106,7 @@ defmodule V2.Join do
 end
 
 defimpl V2.Step, for: V2.Join do
-  def position(_), do: :last
-
-  def extra_args(_), do: []
+  def spec(_), do: %V2.StepSpec{collect: true}
 
   def init(%V2.Join{value: nil}), do: nil
 
@@ -167,9 +161,7 @@ defmodule V2.Uniq do
 end
 
 defimpl V2.Step, for: V2.Uniq do
-  def position(_), do: :anywhere
-
-  def extra_args(%V2.Uniq{map: map}), do: [map]
+  def spec(%V2.Uniq{map: map}), do: %V2.StepSpec{extra_args: [map]}
 
   def init(%V2.Uniq{map: map}) do
     quote do: unquote(map) = %{}
@@ -209,9 +201,7 @@ defmodule V2.Dedup do
 end
 
 defimpl V2.Step, for: V2.Dedup do
-  def position(_), do: :anywhere
-
-  def extra_args(%V2.Dedup{previous: previous}), do: [previous]
+  def spec(%V2.Dedup{previous: previous}), do: %V2.StepSpec{extra_args: [previous]}
 
   def init(%V2.Dedup{previous: previous}) do
     quote do: unquote(previous) = :__ENUMANCER_RESERVED__
@@ -243,29 +233,81 @@ defimpl V2.Step, for: V2.Dedup do
   end
 end
 
-defmodule V2.Drop do
-  @enforce_keys [:amount_var, :value]
+defmodule V2.Take do
+  @enforce_keys [:amount_var, :value, :line]
   defstruct @enforce_keys
 
-  def new(amount) do
+  def new(amount, meta) do
     %__MODULE__{
       amount_var: Macro.unique_var(:amount, nil),
-      value: amount
+      value: amount,
+      line: Keyword.fetch!(meta, :line)
     }
+  end
+
+  def validate_amount(amount) when is_integer(amount) and amount >= 0, do: amount
+end
+
+defimpl V2.Step, for: V2.Take do
+  def spec(%V2.Take{amount_var: amount}) do
+    %V2.StepSpec{extra_args: [amount], halt: true}
+  end
+
+  def init(%V2.Take{amount_var: amount, value: value, line: line}) do
+    quote line: line do
+      unquote(amount) = V2.Take.validate_amount(unquote(value))
+    end
+  end
+
+  def initial_acc(_), do: []
+
+  def define_next_acc(%V2.Take{amount_var: amount}, vars, continue) do
+    quote do
+      case unquote(amount) do
+        amount when amount > 0 ->
+          unquote(amount) = amount - 1
+          unquote(continue)
+
+        _ ->
+          {:__ENUMANCER_HALT__, unquote(vars.composite_acc)}
+      end
+    end
+  end
+
+  def return_acc(_, vars) do
+    quote do
+      [unquote(vars.head) | unquote(vars.acc)]
+    end
+  end
+
+  def wrap(_, ast) do
+    quote do: :lists.reverse(unquote(ast))
   end
 end
 
+defmodule V2.Drop do
+  @enforce_keys [:amount_var, :value, :line]
+  defstruct @enforce_keys
+
+  def new(amount, meta) do
+    %__MODULE__{
+      amount_var: Macro.unique_var(:amount, nil),
+      value: amount,
+      line: Keyword.fetch!(meta, :line)
+    }
+  end
+
+  def validate_amount(amount) when is_integer(amount) and amount >= 0, do: amount
+end
+
 defimpl V2.Step, for: V2.Drop do
-  def position(_), do: :anywhere
+  def spec(%V2.Drop{amount_var: amount}), do: %V2.StepSpec{extra_args: [amount]}
 
   def extra_args(%V2.Drop{amount_var: amount}), do: [amount]
 
-  def init(%V2.Drop{amount_var: amount, value: value}) do
-    quote do
-      unquote(amount) =
-        case unquote(value) do
-          amount when is_integer(amount) and amount > 0 -> amount
-        end
+  def init(%V2.Drop{amount_var: amount, value: value, line: line}) do
+    quote line: line do
+      unquote(amount) = V2.Drop.validate_amount(unquote(value))
     end
   end
 
@@ -305,9 +347,7 @@ defmodule V2.Reverse do
 end
 
 defimpl V2.Step, for: V2.Reverse do
-  def position(_), do: :anywhere
-
-  def extra_args(%V2.Reverse{}), do: []
+  def spec(_), do: %V2.StepSpec{}
 
   def init(_), do: nil
 
@@ -343,9 +383,7 @@ defmodule V2.Sort do
 end
 
 defimpl V2.Step, for: V2.Sort do
-  def position(_), do: :anywhere
-
-  def extra_args(_), do: []
+  def spec(_), do: %V2.StepSpec{collect: true}
 
   def init(_), do: nil
 
