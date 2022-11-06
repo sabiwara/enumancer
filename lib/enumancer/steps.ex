@@ -350,7 +350,7 @@ end
 
 defimpl Enumancer.Step, for: Enumancer.At do
   def spec(_) do
-    %Enumancer.StepSpec{halt: true}
+    %Enumancer.StepSpec{halt: true, collect: true}
   end
 
   def init(_), do: nil
@@ -382,6 +382,80 @@ defimpl Enumancer.Step, for: Enumancer.At do
       case unquote(ast) do
         {:ok, found} -> found
         index when is_integer(index) -> unquote(default)
+      end
+    end
+  end
+end
+
+defmodule Enumancer.First do
+  @enforce_keys [:default]
+  defstruct @enforce_keys
+
+  def new(default \\ nil) do
+    %__MODULE__{default: default}
+  end
+end
+
+defimpl Enumancer.Step, for: Enumancer.First do
+  def spec(_) do
+    %Enumancer.StepSpec{halt: true, collect: true}
+  end
+
+  def init(_), do: nil
+
+  def initial_acc(_), do: :__ENUMANCER_RESERVED__
+
+  def define_next_acc(_, vars, _continue) do
+    quote do
+      unquote(vars.acc) = unquote(vars.head)
+      {:__ENUMANCER_HALT__, unquote(vars.composite_acc)}
+    end
+  end
+
+  def return_acc(_, vars), do: vars.acc
+
+  def wrap(%Enumancer.First{default: default}, ast) do
+    quote do
+      case unquote(ast) do
+        :__ENUMANCER_RESERVED__ -> unquote(default)
+        found -> found
+      end
+    end
+  end
+end
+
+defmodule Enumancer.Last do
+  @enforce_keys [:default]
+  defstruct @enforce_keys
+
+  def new(default \\ nil) do
+    %__MODULE__{default: default}
+  end
+end
+
+defimpl Enumancer.Step, for: Enumancer.Last do
+  def spec(_) do
+    %Enumancer.StepSpec{collect: true}
+  end
+
+  def init(_), do: nil
+
+  def initial_acc(_), do: :__ENUMANCER_RESERVED__
+
+  def define_next_acc(_, vars, _continue) do
+    quote do
+      unquote(vars.acc) = unquote(vars.head)
+      unquote(vars.composite_acc)
+    end
+  end
+
+  def return_acc(_, vars), do: vars.acc
+
+  def wrap(%Enumancer.Last{default: default}, ast) do
+    quote do
+      case unquote(ast) do
+        :__ENUMANCER_RESERVED__ -> unquote(default)
+        found -> found
       end
     end
   end
@@ -503,8 +577,12 @@ defmodule Enumancer.Steps do
   def transform_step({:dedup, _meta, []}), do: Enumancer.Dedup.new()
   def transform_step({:take, meta, [amount]}), do: Enumancer.Take.new(amount, meta)
   def transform_step({:drop, meta, [amount]}), do: Enumancer.Drop.new(amount, meta)
-  def transform_step({:at, meta, [index]}), do: Enumancer.At.new(index)
-  def transform_step({:at, meta, [index, default]}), do: Enumancer.At.new(index, default)
+  def transform_step({:at, _meta, [index]}), do: Enumancer.At.new(index)
+  def transform_step({:at, _meta, [index, default]}), do: Enumancer.At.new(index, default)
+  def transform_step({:first, _meta, []}), do: Enumancer.First.new()
+  def transform_step({:first, _meta, [default]}), do: Enumancer.First.new(default)
+  def transform_step({:last, _meta, []}), do: Enumancer.Last.new()
+  def transform_step({:last, _meta, [default]}), do: Enumancer.Last.new(default)
   def transform_step({:reverse, _meta, []}), do: Enumancer.Reverse.new()
   def transform_step({:reverse, _meta, [tail]}), do: Enumancer.Reverse.new(tail)
   def transform_step({:sort, _meta, []}), do: Enumancer.Sort.new()

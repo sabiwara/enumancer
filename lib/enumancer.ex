@@ -177,6 +177,58 @@ defmodule Enumancer do
 
   ## Examples
 
+      iex> E.first(1..1000)
+      1
+      iex> E.first([])
+      nil
+
+  """
+  def_enum first(enumerable)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.first(1..10, :none)
+      1
+      iex> E.first([], :none)
+      :none
+
+  """
+  def_enum first(enumerable, default)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.last(1..10)
+      10
+      iex> E.last([])
+      nil
+
+  """
+  def_enum last(enumerable)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.last(1..10, :none)
+      10
+      iex> E.last([], :none)
+      :none
+
+  """
+  def_enum last(enumerable, default)
+
+  @doc """
+  .
+
+  ## Examples
+
       iex> E.reverse(1..3)
       [3, 2, 1]
 
