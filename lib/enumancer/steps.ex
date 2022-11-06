@@ -23,7 +23,7 @@ defimpl Enumancer.Step, for: Enumancer.Map do
   def init(_), do: nil
   def initial_acc(_), do: []
 
-  def define_next_acc(%{fun: fun}, vars, continue) do
+  def define_next_acc(%Enumancer.Map{fun: fun}, vars, continue) do
     quote do
       unquote(vars.head) = unquote(fun).(unquote(vars.head))
       unquote(continue)
@@ -52,7 +52,7 @@ defimpl Enumancer.Step, for: Enumancer.Filter do
   def init(_), do: nil
   def initial_acc(_), do: []
 
-  def define_next_acc(%{fun: fun}, vars, continue) do
+  def define_next_acc(%Enumancer.Filter{fun: fun}, vars, continue) do
     quote do
       if unquote(fun).(unquote(vars.head)) do
         unquote(continue)
@@ -402,5 +402,41 @@ defimpl Enumancer.Step, for: Enumancer.Sort do
       :asc -> quote do: Enum.sort(unquote(ast))
       _ -> quote do: Enum.sort(unquote(ast), unquote(sorter))
     end
+  end
+end
+
+defmodule Enumancer.FlatMap do
+  @enforce_keys [:fun]
+  defstruct @enforce_keys
+
+  def new(), do: %__MODULE__{fun: quote(do: & &1)}
+  def new(fun), do: %__MODULE__{fun: fun}
+end
+
+defimpl Enumancer.Step, for: Enumancer.FlatMap do
+  def spec(_), do: %Enumancer.StepSpec{}
+
+  def extra_args(_), do: []
+  def init(_), do: nil
+  def initial_acc(_), do: []
+
+  def define_next_acc(%{fun: fun}, vars, continue) do
+    # TODO: should use reduce_while
+    quote do
+      Enum.reduce(unquote(fun).(unquote(vars.head)), unquote(vars.composite_acc), fn
+        unquote(vars.head), unquote(vars.composite_acc) ->
+          unquote(continue)
+      end)
+    end
+  end
+
+  def return_acc(_, vars) do
+    quote do
+      [unquote(vars.head) | unquote(vars.acc)]
+    end
+  end
+
+  def wrap(_, ast) do
+    quote do: :lists.reverse(unquote(ast))
   end
 end

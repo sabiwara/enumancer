@@ -118,6 +118,8 @@ defmodule Enumancer.Core do
   defp transform_step({:reverse, _meta, [tail]}), do: Enumancer.Reverse.new(tail)
   defp transform_step({:sort, _meta, []}), do: Enumancer.Sort.new()
   defp transform_step({:sort, _meta, [sorter]}), do: Enumancer.Sort.new(sorter)
+  defp transform_step({:concat, _meta, []}), do: Enumancer.FlatMap.new()
+  defp transform_step({:flat_map, _meta, [fun]}), do: Enumancer.FlatMap.new(fun)
 
   defp transform_step(ast) do
     {fun_with_arity, line} = fun_arity_and_line(ast)

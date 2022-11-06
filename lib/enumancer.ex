@@ -114,22 +114,22 @@ defmodule Enumancer do
   @doc """
   .
 
+  Negative indexes are **NOT** supported, since this would imply to
+  load the whole list and therefore cannot be done lazily.
+
   ## Examples
 
       iex> E.take(1..1000, 5)
       [1, 2, 3, 4, 5]
-
-  Negative indexes are **NOT** supported, since this would imply to
-  load the whole list and therefore cannot be done lazily.
-
-      iex> E.take(1..1000, -5)
-      ** (CaseClauseError) no case clause matching: -5
 
   """
   def_enum take(enumerable, amount)
 
   @doc """
   .
+
+  Negative indexes are **NOT** supported, since this would imply to
+  load the whole list and therefore cannot be done lazily.
 
   ## Examples
 
@@ -171,6 +171,28 @@ defmodule Enumancer do
 
   """
   def_enum sort(enumerable)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.concat([1..3, 4..6]) |> E.explain()
+      [1, 2, 3, 4, 5, 6]
+
+  """
+  def_enum concat(enumerable)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.flat_map(1..3, fn n -> 1..n end) |> E.explain()
+      [1, 1, 2, 1, 2, 3]
+
+  """
+  def_enum flat_map(enumerable, fun)
 
   defmacro def(foo, bar) do
     Macro.to_string([foo, bar])
