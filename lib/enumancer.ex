@@ -1,4 +1,4 @@
-defmodule V2 do
+defmodule Enumancer do
   @moduledoc """
 
   ## Examples
@@ -32,7 +32,7 @@ defmodule V2 do
 
   """
 
-  import V2.Core
+  import Enumancer.Core
 
   @doc """
   .
@@ -181,8 +181,8 @@ defmodule V2 do
   end
 end
 
-defmodule V2.Sample do
-  require V2, as: E
+defmodule Enumancer.Sample do
+  require Enumancer, as: E
 
   E.def sum_squares(enumerable) do
     enumerable

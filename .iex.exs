@@ -1,5 +1,5 @@
 import_file_if_available("~/.iex.exs")
 
-import_if_available V2
+import_if_available Enumancer
 
-alias V2, as: E
+alias Enumancer, as: E

@@ -1,9 +1,9 @@
-defmodule V2.CoreTest do
+defmodule Enumancer.CoreTest do
   use ExUnit.Case, async: true
-  doctest V2.Core, import: true
+  doctest Enumancer.Core, import: true
 
-  alias V2, as: E
-  alias V2.Core
+  alias Enumancer, as: E
+  alias Enumancer.Core
 
   describe "prepare_pipeline" do
     defmacrop pp(ast) do

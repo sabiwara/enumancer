@@ -1,8 +1,8 @@
-defmodule V2.StepSpec do
+defmodule Enumancer.StepSpec do
   defstruct collect: false, extra_args: [], halt: false
 end
 
-defprotocol V2.Step do
+defprotocol Enumancer.Step do
   def spec(step)
   def init(step)
   def initial_acc(step)
@@ -11,13 +11,13 @@ defprotocol V2.Step do
   def wrap(step, ast)
 end
 
-defmodule V2.Map do
+defmodule Enumancer.Map do
   @enforce_keys [:fun]
   defstruct @enforce_keys
 end
 
-defimpl V2.Step, for: V2.Map do
-  def spec(_), do: %V2.StepSpec{}
+defimpl Enumancer.Step, for: Enumancer.Map do
+  def spec(_), do: %Enumancer.StepSpec{}
 
   def extra_args(_), do: []
   def init(_), do: nil
@@ -41,13 +41,13 @@ defimpl V2.Step, for: V2.Map do
   end
 end
 
-defmodule V2.Filter do
+defmodule Enumancer.Filter do
   @enforce_keys [:fun]
   defstruct @enforce_keys
 end
 
-defimpl V2.Step, for: V2.Filter do
-  def spec(_), do: %V2.StepSpec{}
+defimpl Enumancer.Step, for: Enumancer.Filter do
+  def spec(_), do: %Enumancer.StepSpec{}
 
   def init(_), do: nil
   def initial_acc(_), do: []
@@ -73,14 +73,14 @@ defimpl V2.Step, for: V2.Filter do
   end
 end
 
-defmodule V2.Sum do
+defmodule Enumancer.Sum do
   defstruct []
 
   def new([]), do: %__MODULE__{}
 end
 
-defimpl V2.Step, for: V2.Sum do
-  def spec(_), do: %V2.StepSpec{collect: true}
+defimpl Enumancer.Step, for: Enumancer.Sum do
+  def spec(_), do: %Enumancer.StepSpec{collect: true}
 
   def init(_), do: nil
   def initial_acc(_), do: 0
@@ -96,7 +96,7 @@ defimpl V2.Step, for: V2.Sum do
   def wrap(_, ast), do: ast
 end
 
-defmodule V2.Join do
+defmodule Enumancer.Join do
   @enforce_keys [:value, :joiner_var]
   defstruct @enforce_keys
 
@@ -105,12 +105,12 @@ defmodule V2.Join do
   def new(joiner), do: %__MODULE__{value: joiner, joiner_var: Macro.unique_var(:joiner, nil)}
 end
 
-defimpl V2.Step, for: V2.Join do
-  def spec(_), do: %V2.StepSpec{collect: true}
+defimpl Enumancer.Step, for: Enumancer.Join do
+  def spec(_), do: %Enumancer.StepSpec{collect: true}
 
-  def init(%V2.Join{value: nil}), do: nil
+  def init(%Enumancer.Join{value: nil}), do: nil
 
-  def init(%V2.Join{value: value, joiner_var: var}) do
+  def init(%Enumancer.Join{value: value, joiner_var: var}) do
     quote do
       unquote(var) =
         case unquote(value) do
@@ -123,7 +123,7 @@ defimpl V2.Step, for: V2.Join do
 
   def define_next_acc(_, _vars, continue), do: continue
 
-  def return_acc(%V2.Join{joiner_var: joiner}, vars) do
+  def return_acc(%Enumancer.Join{joiner_var: joiner}, vars) do
     maybe_joiner = if joiner, do: [joiner], else: []
 
     quote do
@@ -137,7 +137,7 @@ defimpl V2.Step, for: V2.Join do
     end
   end
 
-  def wrap(%V2.Join{joiner_var: nil}, ast) do
+  def wrap(%Enumancer.Join{joiner_var: nil}, ast) do
     quote do
       :lists.reverse(unquote(ast)) |> IO.iodata_to_binary()
     end
@@ -153,17 +153,17 @@ defimpl V2.Step, for: V2.Join do
   end
 end
 
-defmodule V2.Uniq do
+defmodule Enumancer.Uniq do
   @enforce_keys [:map]
   defstruct @enforce_keys
 
   def new, do: %__MODULE__{map: Macro.unique_var(:uniq, nil)}
 end
 
-defimpl V2.Step, for: V2.Uniq do
-  def spec(%V2.Uniq{map: map}), do: %V2.StepSpec{extra_args: [map]}
+defimpl Enumancer.Step, for: Enumancer.Uniq do
+  def spec(%Enumancer.Uniq{map: map}), do: %Enumancer.StepSpec{extra_args: [map]}
 
-  def init(%V2.Uniq{map: map}) do
+  def init(%Enumancer.Uniq{map: map}) do
     quote do: unquote(map) = %{}
   end
 
@@ -193,23 +193,23 @@ defimpl V2.Step, for: V2.Uniq do
   end
 end
 
-defmodule V2.Dedup do
+defmodule Enumancer.Dedup do
   @enforce_keys [:previous]
   defstruct @enforce_keys
 
   def new, do: %__MODULE__{previous: Macro.unique_var(:previous, nil)}
 end
 
-defimpl V2.Step, for: V2.Dedup do
-  def spec(%V2.Dedup{previous: previous}), do: %V2.StepSpec{extra_args: [previous]}
+defimpl Enumancer.Step, for: Enumancer.Dedup do
+  def spec(%Enumancer.Dedup{previous: previous}), do: %Enumancer.StepSpec{extra_args: [previous]}
 
-  def init(%V2.Dedup{previous: previous}) do
+  def init(%Enumancer.Dedup{previous: previous}) do
     quote do: unquote(previous) = :__ENUMANCER_RESERVED__
   end
 
   def initial_acc(_), do: []
 
-  def define_next_acc(%V2.Dedup{previous: previous}, vars, continue) do
+  def define_next_acc(%Enumancer.Dedup{previous: previous}, vars, continue) do
     quote do
       case unquote(vars.head) do
         ^unquote(previous) ->
@@ -233,7 +233,7 @@ defimpl V2.Step, for: V2.Dedup do
   end
 end
 
-defmodule V2.Take do
+defmodule Enumancer.Take do
   @enforce_keys [:amount_var, :value, :line]
   defstruct @enforce_keys
 
@@ -248,20 +248,20 @@ defmodule V2.Take do
   def validate_amount(amount) when is_integer(amount) and amount >= 0, do: amount
 end
 
-defimpl V2.Step, for: V2.Take do
-  def spec(%V2.Take{amount_var: amount}) do
-    %V2.StepSpec{extra_args: [amount], halt: true}
+defimpl Enumancer.Step, for: Enumancer.Take do
+  def spec(%Enumancer.Take{amount_var: amount}) do
+    %Enumancer.StepSpec{extra_args: [amount], halt: true}
   end
 
-  def init(%V2.Take{amount_var: amount, value: value, line: line}) do
+  def init(%Enumancer.Take{amount_var: amount, value: value, line: line}) do
     quote line: line do
-      unquote(amount) = V2.Take.validate_amount(unquote(value))
+      unquote(amount) = Enumancer.Take.validate_amount(unquote(value))
     end
   end
 
   def initial_acc(_), do: []
 
-  def define_next_acc(%V2.Take{amount_var: amount}, vars, continue) do
+  def define_next_acc(%Enumancer.Take{amount_var: amount}, vars, continue) do
     quote do
       case unquote(amount) do
         amount when amount > 0 ->
@@ -285,7 +285,7 @@ defimpl V2.Step, for: V2.Take do
   end
 end
 
-defmodule V2.Drop do
+defmodule Enumancer.Drop do
   @enforce_keys [:amount_var, :value, :line]
   defstruct @enforce_keys
 
@@ -300,20 +300,20 @@ defmodule V2.Drop do
   def validate_amount(amount) when is_integer(amount) and amount >= 0, do: amount
 end
 
-defimpl V2.Step, for: V2.Drop do
-  def spec(%V2.Drop{amount_var: amount}), do: %V2.StepSpec{extra_args: [amount]}
+defimpl Enumancer.Step, for: Enumancer.Drop do
+  def spec(%Enumancer.Drop{amount_var: amount}), do: %Enumancer.StepSpec{extra_args: [amount]}
 
-  def extra_args(%V2.Drop{amount_var: amount}), do: [amount]
+  def extra_args(%Enumancer.Drop{amount_var: amount}), do: [amount]
 
-  def init(%V2.Drop{amount_var: amount, value: value, line: line}) do
+  def init(%Enumancer.Drop{amount_var: amount, value: value, line: line}) do
     quote line: line do
-      unquote(amount) = V2.Drop.validate_amount(unquote(value))
+      unquote(amount) = Enumancer.Drop.validate_amount(unquote(value))
     end
   end
 
   def initial_acc(_), do: []
 
-  def define_next_acc(%V2.Drop{amount_var: amount}, vars, continue) do
+  def define_next_acc(%Enumancer.Drop{amount_var: amount}, vars, continue) do
     quote do
       case unquote(amount) do
         amount when amount > 0 ->
@@ -337,7 +337,7 @@ defimpl V2.Step, for: V2.Drop do
   end
 end
 
-defmodule V2.Reverse do
+defmodule Enumancer.Reverse do
   @enforce_keys [:tail]
   defstruct @enforce_keys
 
@@ -346,12 +346,12 @@ defmodule V2.Reverse do
   end
 end
 
-defimpl V2.Step, for: V2.Reverse do
-  def spec(_), do: %V2.StepSpec{}
+defimpl Enumancer.Step, for: Enumancer.Reverse do
+  def spec(_), do: %Enumancer.StepSpec{}
 
   def init(_), do: nil
 
-  def initial_acc(%V2.Reverse{tail: tail}) do
+  def initial_acc(%Enumancer.Reverse{tail: tail}) do
     if is_list(tail) do
       tail
     else
@@ -370,7 +370,7 @@ defimpl V2.Step, for: V2.Reverse do
   def wrap(_, ast), do: ast
 end
 
-defmodule V2.Sort do
+defmodule Enumancer.Sort do
   # TODO: optimization: if only step, optimize by removing the loop
   # since this is a wrap only step!
 
@@ -382,8 +382,8 @@ defmodule V2.Sort do
   end
 end
 
-defimpl V2.Step, for: V2.Sort do
-  def spec(_), do: %V2.StepSpec{collect: true}
+defimpl Enumancer.Step, for: Enumancer.Sort do
+  def spec(_), do: %Enumancer.StepSpec{collect: true}
 
   def init(_), do: nil
 
@@ -397,7 +397,7 @@ defimpl V2.Step, for: V2.Sort do
     end
   end
 
-  def wrap(%V2.Sort{sorter: sorter}, ast) do
+  def wrap(%Enumancer.Sort{sorter: sorter}, ast) do
     case sorter do
       :asc -> quote do: Enum.sort(unquote(ast))
       _ -> quote do: Enum.sort(unquote(ast), unquote(sorter))

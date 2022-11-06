@@ -1,5 +1,5 @@
-defmodule V2.Core do
-  alias V2.Step
+defmodule Enumancer.Core do
+  alias Enumancer.Step
 
   def inspect_ast(ast) do
     ast |> Macro.to_string() |> IO.puts()
@@ -38,11 +38,11 @@ defmodule V2.Core do
     case normalize_call_function(ast, env) do
       {Kernel, :|>, [left, right]} ->
         case normalize_call_function(right, env) do
-          {V2, fun, args} -> {:ok, left, {fun, meta, args}}
+          {Enumancer, fun, args} -> {:ok, left, {fun, meta, args}}
           _ -> :error
         end
 
-      {V2, fun, [arg | args]} ->
+      {Enumancer, fun, [arg | args]} ->
         {:ok, arg, {fun, meta, args}}
 
       _ ->
@@ -105,19 +105,19 @@ defmodule V2.Core do
     end
   end
 
-  defp transform_step({:map, _meta, [fun]}), do: %V2.Map{fun: fun}
-  defp transform_step({:filter, _meta, [fun]}), do: %V2.Filter{fun: fun}
-  defp transform_step({:sum, _meta, []}), do: %V2.Sum{}
-  defp transform_step({:join, _meta, []}), do: V2.Join.new()
-  defp transform_step({:join, _meta, [joiner]}), do: V2.Join.new(joiner)
-  defp transform_step({:uniq, _meta, []}), do: V2.Uniq.new()
-  defp transform_step({:dedup, _meta, []}), do: V2.Dedup.new()
-  defp transform_step({:take, meta, [amount]}), do: V2.Take.new(amount, meta)
-  defp transform_step({:drop, meta, [amount]}), do: V2.Drop.new(amount, meta)
-  defp transform_step({:reverse, _meta, []}), do: V2.Reverse.new()
-  defp transform_step({:reverse, _meta, [tail]}), do: V2.Reverse.new(tail)
-  defp transform_step({:sort, _meta, []}), do: V2.Sort.new()
-  defp transform_step({:sort, _meta, [sorter]}), do: V2.Sort.new(sorter)
+  defp transform_step({:map, _meta, [fun]}), do: %Enumancer.Map{fun: fun}
+  defp transform_step({:filter, _meta, [fun]}), do: %Enumancer.Filter{fun: fun}
+  defp transform_step({:sum, _meta, []}), do: %Enumancer.Sum{}
+  defp transform_step({:join, _meta, []}), do: Enumancer.Join.new()
+  defp transform_step({:join, _meta, [joiner]}), do: Enumancer.Join.new(joiner)
+  defp transform_step({:uniq, _meta, []}), do: Enumancer.Uniq.new()
+  defp transform_step({:dedup, _meta, []}), do: Enumancer.Dedup.new()
+  defp transform_step({:take, meta, [amount]}), do: Enumancer.Take.new(amount, meta)
+  defp transform_step({:drop, meta, [amount]}), do: Enumancer.Drop.new(amount, meta)
+  defp transform_step({:reverse, _meta, []}), do: Enumancer.Reverse.new()
+  defp transform_step({:reverse, _meta, [tail]}), do: Enumancer.Reverse.new(tail)
+  defp transform_step({:sort, _meta, []}), do: Enumancer.Sort.new()
+  defp transform_step({:sort, _meta, [sorter]}), do: Enumancer.Sort.new(sorter)
 
   defp transform_step(ast) do
     {fun_with_arity, line} = fun_arity_and_line(ast)
