@@ -300,7 +300,7 @@ defmodule Enumancer.Sample do
   def sum_squares2(enumerable) do
     enumerable
     |> E.map(&(&1 * &1))
-    |> E.take(-5)
+    # |> E.take(-5)
     |> E.sum()
   end
 end

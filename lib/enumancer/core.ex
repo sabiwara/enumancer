@@ -1,7 +1,6 @@
 defmodule Enumancer.Core do
   alias Enumancer.MacroHelpers
   alias Enumancer.Step
-  alias Enumancer.Steps
 
   defmacro def_enum({fun, _, [enum | args]}) do
     quote do
@@ -50,14 +49,14 @@ defmodule Enumancer.Core do
   defp split_call(_ast, _env), do: :error
 
   defp asts_to_steps([last], acc) do
-    step = Steps.transform_step(last)
+    step = Step.from_ast(last)
     [step | acc]
   end
 
   defp asts_to_steps([head | tail], acc) do
-    step = Steps.transform_step(head)
+    step = Step.from_ast(head)
 
-    unless Step.spec(step).collect do
+    unless step[:collect] do
       asts_to_steps(tail, [step | acc])
     else
       {fun_with_arity, line} = MacroHelpers.fun_arity_and_line(head)
@@ -78,13 +77,13 @@ defmodule Enumancer.Core do
 
     body =
       Enum.reduce(steps, return, fn step, continue ->
-        build_body(step, continue, vars)
+        Step.next_acc(step, vars, continue)
       end)
 
     inits = for step <- steps, init = Step.init(step), do: init
 
     {module, reduce_fun} =
-      if Enum.any?(steps, &Step.spec(&1).halt) do
+      if Enum.any?(steps, & &1[:halt]) do
         {__MODULE__, :reduce_while}
       else
         {Enum, :reduce}
@@ -99,20 +98,13 @@ defmodule Enumancer.Core do
           unquote(vars.head), unquote(vars.composite_acc) -> unquote(body)
         end)
 
-      unquote(Step.wrap(last, vars.acc))
+      unquote(Step.wrap_acc(last, vars.acc))
     end
-  end
-
-  defp reduce_block(steps, args) do
-    if Enum.any?(steps, &Step.spec(&1).halt) do
-      quote do: reduce_while(unquote_splicing(args))
-    else
-      quote do: Enum.reduce(unquote_splicing(args))
-    end
+    |> MacroHelpers.remove_useless_assigns()
   end
 
   defp init_vars(steps) do
-    extra_args = Enum.flat_map(steps, &Step.spec(&1).extra_args)
+    extra_args = Enum.flat_map(steps, &Map.get(&1, :extra_args, []))
 
     [:head, :tail, :acc]
     |> Map.new(&{&1, Macro.unique_var(&1, nil)})
@@ -129,10 +121,6 @@ defmodule Enumancer.Core do
 
   defp composite_acc(acc, extra) do
     quote do: {unquote(acc), unquote_splicing(extra)}
-  end
-
-  defp build_body(step, continue, vars) do
-    Step.define_next_acc(step, vars, continue)
   end
 
   @compile {:inline, reduce_while_list: 3, reduce_while_range: 5}

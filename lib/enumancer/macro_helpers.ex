@@ -41,6 +41,16 @@ defmodule Enumancer.MacroHelpers do
     {"Enumancer.#{fun}/#{arity}", meta[:line]}
   end
 
+  def remove_useless_assigns(ast) do
+    Macro.postwalk(ast, fn
+      {:__block__, _, [{:=, _, [var, node]}, var]} -> node
+      node -> node
+    end)
+  end
+
+  def to_exprs({:__block__, _, exprs}), do: exprs
+  def to_exprs(expr), do: [expr]
+
   def inspect_ast(ast) do
     ast |> Macro.to_string() |> IO.puts()
     ast
