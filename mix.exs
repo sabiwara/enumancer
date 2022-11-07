@@ -8,7 +8,7 @@ defmodule Enumancer.MixProject do
     [
       app: :enumancer,
       version: @version,
-      elixir: "~> 1.12",
+      elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       preferred_cli_env: [
