@@ -51,6 +51,13 @@ defmodule Enumancer.MacroHelpers do
   def to_exprs({:__block__, _, exprs}), do: exprs
   def to_exprs(expr), do: [expr]
 
+  def maybe_apply_fun({:&, _, [{:&, _, [1]}]}, ast), do: ast
+  def maybe_apply_fun({:fn, [], [{:->, [], [[{var, [], ctx}], {var, [], ctx}]}]}, ast), do: ast
+
+  def maybe_apply_fun(fun, ast) do
+    quote do: unquote(fun).(unquote(ast))
+  end
+
   def inspect_ast(ast) do
     ast |> Macro.to_string() |> IO.puts()
     ast

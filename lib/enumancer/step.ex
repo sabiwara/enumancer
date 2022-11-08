@@ -5,7 +5,7 @@ defmodule Enumancer.Step do
   alias Enumancer.MacroHelpers
 
   @type ast :: Macro.t()
-  @type vars :: %{head: ast, acc: ast, composite_acc: ast, extra_args: [ast]}
+  @type vars :: %{elem: ast, acc: ast, composite_acc: ast, extra_args: [ast]}
   @type t :: %{
           optional(:collect) => boolean(),
           optional(:halt) => boolean(),
@@ -45,7 +45,7 @@ defmodule Enumancer.Step do
   def return_acc(step, vars) do
     case step do
       %{return_acc: fun} -> fun.(vars)
-      %{} -> quote do: [unquote(vars.head) | unquote(vars.acc)]
+      %{} -> quote do: [unquote(vars.elem) | unquote(vars.acc)]
     end
   end
 
@@ -62,7 +62,7 @@ defmodule Enumancer.Step do
     %{
       next_acc: fn vars, continue ->
         quote do
-          unquote(vars.head) = unquote(fun).(unquote(vars.head))
+          unquote(vars.elem) = unquote(fun).(unquote(vars.elem))
           unquote_splicing(to_exprs(continue))
         end
       end
@@ -74,7 +74,7 @@ defmodule Enumancer.Step do
     %{
       next_acc: fn vars, continue ->
         quote do
-          if unquote(fun).(unquote(vars.head)) do
+          if unquote(fun).(unquote(vars.elem)) do
             (unquote_splicing(to_exprs(continue)))
           else
             unquote(vars.composite_acc)
@@ -84,120 +84,48 @@ defmodule Enumancer.Step do
     }
   end
 
-  @spec sum() :: t
-  def sum() do
+  @spec reject(ast) :: t
+  def reject(fun) do
     %{
-      collect: true,
-      initial_acc: fn -> 0 end,
-      return_acc: fn vars ->
-        quote do: unquote(vars.head) + unquote(vars.acc)
-      end,
-      wrap_acc: fn ast -> ast end
+      next_acc: fn vars, continue ->
+        quote do
+          if unquote(fun).(unquote(vars.elem)) do
+            unquote(vars.composite_acc)
+          else
+            (unquote_splicing(to_exprs(continue)))
+          end
+        end
+      end
     }
   end
 
-  @spec join(ast) :: t
-  def join(_joiner = "") do
+  @spec split_with(ast) :: t
+  def split_with(fun) do
+    rejected = Macro.unique_var(:rejected, __MODULE__)
+
     %{
       collect: true,
-      return_acc: fn vars ->
+      extra_args: [rejected],
+      init: fn -> quote do: unquote(rejected) = [] end,
+      next_acc: fn vars, continue ->
         quote do
-          string =
-            case unquote(vars.head) do
-              binary when is_binary(binary) -> binary
-              other -> String.Chars.to_string(other)
-            end
-
-          [string | unquote(vars.acc)]
+          if unquote(fun).(unquote(vars.elem)) do
+            (unquote_splicing(to_exprs(continue)))
+          else
+            unquote(rejected) = [unquote(vars.elem) | unquote(rejected)]
+            unquote(vars.composite_acc)
+          end
         end
       end,
       wrap_acc: fn ast ->
-        quote do: :lists.reverse(unquote(ast)) |> IO.iodata_to_binary()
-      end
-    }
-  end
-
-  def join(_joiner = value) do
-    joiner = Macro.unique_var(:joiner, nil)
-
-    %{
-      collect: true,
-      init: fn ->
-        quote do: unquote(joiner) = Guards.validate_binary(unquote(value))
-      end,
-      return_acc: fn vars ->
-        quote do
-          string =
-            case unquote(vars.head) do
-              binary when is_binary(binary) -> binary
-              other -> String.Chars.to_string(other)
-            end
-
-          [unquote(joiner), string | unquote(vars.acc)]
-        end
-      end,
-      wrap_acc: fn ast ->
-        quote do
-          case unquote(ast) do
-            [] -> ""
-            [_ | tail] -> :lists.reverse(tail) |> IO.iodata_to_binary()
-          end
-        end
-      end
-    }
-  end
-
-  @spec uniq() :: t
-  def uniq() do
-    set = Macro.unique_var(:set, nil)
-
-    %{
-      extra_args: [set],
-      init: fn ->
-        quote do: unquote(set) = %{}
-      end,
-      next_acc: fn vars, continue ->
-        quote do
-          case unquote(set) do
-            %{^unquote(vars.head) => _} ->
-              unquote(vars.composite_acc)
-
-            _ ->
-              unquote(set) = Map.put(unquote(set), unquote(vars.head), [])
-              unquote_splicing(to_exprs(continue))
-          end
-        end
-      end
-    }
-  end
-
-  @spec dedup() :: t
-  def dedup() do
-    previous = Macro.unique_var(:previous, nil)
-
-    %{
-      extra_args: [previous],
-      init: fn ->
-        quote do: unquote(previous) = :__ENUMANCER_RESERVED__
-      end,
-      next_acc: fn vars, continue ->
-        quote do
-          case unquote(vars.head) do
-            ^unquote(previous) ->
-              unquote(vars.composite_acc)
-
-            _ ->
-              unquote(previous) = unquote(vars.head)
-              unquote_splicing(to_exprs(continue))
-          end
-        end
+        quote do: {:lists.reverse(unquote(ast)), :lists.reverse(unquote(rejected))}
       end
     }
   end
 
   @spec take(ast) :: t
   def take(_amount = value) do
-    amount = Macro.unique_var(:amount, nil)
+    amount = Macro.unique_var(:amount, __MODULE__)
 
     %{
       halt: true,
@@ -222,7 +150,7 @@ defmodule Enumancer.Step do
 
   @spec drop(ast) :: t
   def drop(_amount = value) do
-    amount = Macro.unique_var(:amount, nil)
+    amount = Macro.unique_var(:amount, __MODULE__)
 
     %{
       extra_args: [amount],
@@ -244,6 +172,382 @@ defmodule Enumancer.Step do
     }
   end
 
+  @spec split(ast) :: t
+  def split(_amount = value) do
+    amount = Macro.unique_var(:amount, __MODULE__)
+    dropped = Macro.unique_var(:dropped, __MODULE__)
+
+    %{
+      collect: true,
+      extra_args: [amount, dropped],
+      init: fn ->
+        quote do
+          unquote(amount) = Guards.validate_positive_integer(unquote(value))
+          unquote(dropped) = []
+        end
+      end,
+      next_acc: fn vars, continue ->
+        quote do
+          case unquote(amount) do
+            amount when amount > 0 ->
+              unquote(amount) = amount - 1
+              (unquote_splicing(to_exprs(continue)))
+
+            _ ->
+              unquote(dropped) = [unquote(vars.elem) | unquote(dropped)]
+              unquote(vars.composite_acc)
+          end
+        end
+      end,
+      wrap_acc: fn ast ->
+        quote do: {:lists.reverse(unquote(ast)), :lists.reverse(unquote(dropped))}
+      end
+    }
+  end
+
+  @spec take_while(ast) :: t
+  def take_while(fun) do
+    %{
+      halt: true,
+      next_acc: fn vars, continue ->
+        quote do
+          if unquote(fun).(unquote(vars.elem)) do
+            (unquote_splicing(to_exprs(continue)))
+          else
+            {:__ENUMANCER_HALT__, unquote(vars.composite_acc)}
+          end
+        end
+      end
+    }
+  end
+
+  @spec drop_while(ast) :: t
+  def drop_while(fun) do
+    %{
+      next_acc: fn vars, continue ->
+        quote do
+          if unquote(fun).(unquote(vars.elem)) do
+            unquote(vars.composite_acc)
+          else
+            (unquote_splicing(to_exprs(continue)))
+          end
+        end
+      end
+    }
+  end
+
+  @spec split_while(ast) :: t
+  def split_while(fun) do
+    dropped = Macro.unique_var(:dropped, __MODULE__)
+
+    %{
+      collect: true,
+      extra_args: [dropped],
+      init: fn ->
+        quote do
+          unquote(dropped) = []
+        end
+      end,
+      next_acc: fn vars, continue ->
+        quote do
+          if unquote(fun).(unquote(vars.elem)) do
+            (unquote_splicing(to_exprs(continue)))
+          else
+            unquote(dropped) = [unquote(vars.elem) | unquote(dropped)]
+            unquote(vars.composite_acc)
+          end
+        end
+      end,
+      wrap_acc: fn ast ->
+        quote do: {:lists.reverse(unquote(ast)), :lists.reverse(unquote(dropped))}
+      end
+    }
+  end
+
+  @spec uniq_by(ast) :: t
+  def uniq_by(fun) do
+    set = Macro.unique_var(:set, __MODULE__)
+
+    %{
+      extra_args: [set],
+      init: fn ->
+        quote do: unquote(set) = %{}
+      end,
+      next_acc: fn vars, continue ->
+        quote do
+          key = unquote(MacroHelpers.maybe_apply_fun(fun, vars.elem))
+
+          case unquote(set) do
+            %{^key => _} ->
+              unquote(vars.composite_acc)
+
+            _ ->
+              unquote(set) = Map.put(unquote(set), key, [])
+              unquote_splicing(to_exprs(continue))
+          end
+        end
+      end
+    }
+  end
+
+  @spec dedup_by(ast) :: t
+  def dedup_by(fun) do
+    previous = Macro.unique_var(:previous, __MODULE__)
+
+    %{
+      extra_args: [previous],
+      init: fn ->
+        quote do: unquote(previous) = :__ENUMANCER_RESERVED__
+      end,
+      next_acc: fn vars, continue ->
+        quote do
+          case unquote(MacroHelpers.maybe_apply_fun(fun, vars.elem)) do
+            ^unquote(previous) ->
+              unquote(vars.composite_acc)
+
+            current ->
+              unquote(previous) = current
+              unquote_splicing(to_exprs(continue))
+          end
+        end
+      end
+    }
+  end
+
+  @spec reduce(ast, ast) :: t
+  def reduce(initial, fun) do
+    %{
+      collect: true,
+      initial_acc: fn -> initial end,
+      return_acc: fn vars ->
+        quote do: unquote(fun).(unquote(vars.elem), unquote(vars.acc))
+      end,
+      wrap_acc: fn ast -> ast end
+    }
+  end
+
+  @spec each(ast) :: t
+  def each(fun) do
+    %{
+      collect: true,
+      initial_acc: fn -> :ok end,
+      next_acc: fn vars, continue ->
+        quote do
+          unquote(fun).(unquote(vars.elem))
+          unquote_splicing(to_exprs(continue))
+        end
+      end,
+      return_acc: fn vars -> vars.acc end,
+      wrap_acc: fn ast -> ast end
+    }
+  end
+
+  @spec count() :: t
+  def count() do
+    %{
+      collect: true,
+      initial_acc: fn -> 0 end,
+      return_acc: fn vars ->
+        quote do: unquote(vars.acc) + 1
+      end,
+      wrap_acc: fn ast -> ast end
+    }
+  end
+
+  @spec sum() :: t
+  def sum() do
+    %{
+      collect: true,
+      initial_acc: fn -> 0 end,
+      return_acc: fn vars ->
+        quote do: unquote(vars.elem) + unquote(vars.acc)
+      end,
+      wrap_acc: fn ast -> ast end
+    }
+  end
+
+  @spec product() :: t
+  def product() do
+    %{
+      collect: true,
+      initial_acc: fn -> 1 end,
+      return_acc: fn vars ->
+        quote do: unquote(vars.elem) * unquote(vars.acc)
+      end,
+      wrap_acc: fn ast -> ast end
+    }
+  end
+
+  @spec mean() :: t
+  def mean() do
+    count = Macro.unique_var(:count, __MODULE__)
+
+    %{
+      collect: true,
+      extra_args: [count],
+      initial_acc: fn -> 0 end,
+      init: fn -> quote do: unquote(count) = 0 end,
+      next_acc: fn _vars, continue ->
+        quote do
+          unquote(count) = unquote(count) + 1
+          unquote_splicing(to_exprs(continue))
+        end
+      end,
+      return_acc: fn vars ->
+        quote do
+          unquote(vars.elem) + unquote(vars.acc)
+        end
+      end,
+      wrap_acc: fn ast -> quote do: unquote(ast) / unquote(count) end
+    }
+  end
+
+  @spec frequencies_by(ast) :: t
+  def frequencies_by(fun) do
+    %{
+      collect: true,
+      initial_acc: fn -> quote do: %{} end,
+      return_acc: fn vars ->
+        quote do
+          unquote_splicing(maybe_apply_and_reassign(vars.elem, fun))
+
+          case unquote(vars.acc) do
+            acc = %{^unquote(vars.elem) => count} -> %{acc | unquote(vars.elem) => count + 1}
+            acc -> Map.put(acc, unquote(vars.elem), 1)
+          end
+        end
+      end,
+      wrap_acc: fn ast -> ast end
+    }
+  end
+
+  @spec group_by(ast, ast) :: t
+  def group_by(key_fun, value_fun) do
+    %{
+      collect: true,
+      initial_acc: fn -> quote do: %{} end,
+      return_acc: fn vars ->
+        quote do
+          key = unquote(key_fun).(unquote(vars.elem))
+          unquote_splicing(maybe_apply_and_reassign(vars.elem, value_fun))
+
+          case unquote(vars.acc) do
+            acc = %{^key => list} -> %{acc | key => [unquote(vars.elem) | list]}
+            acc -> Map.put(acc, key, [unquote(vars.elem)])
+          end
+        end
+      end,
+      wrap_acc: fn ast -> ast end
+    }
+  end
+
+  @spec join(ast) :: t
+  def join(_joiner = "") do
+    %{
+      collect: true,
+      return_acc: fn vars ->
+        quote do
+          string =
+            case unquote(vars.elem) do
+              binary when is_binary(binary) -> binary
+              other -> String.Chars.to_string(other)
+            end
+
+          [string | unquote(vars.acc)]
+        end
+      end,
+      wrap_acc: fn ast ->
+        quote do: :lists.reverse(unquote(ast)) |> IO.iodata_to_binary()
+      end
+    }
+  end
+
+  def join(_joiner = value) do
+    joiner = Macro.unique_var(:joiner, __MODULE__)
+
+    %{
+      collect: true,
+      init: fn ->
+        quote do: unquote(joiner) = Guards.validate_binary(unquote(value))
+      end,
+      return_acc: fn vars ->
+        quote do
+          string =
+            case unquote(vars.elem) do
+              binary when is_binary(binary) -> binary
+              other -> String.Chars.to_string(other)
+            end
+
+          [unquote(joiner), string | unquote(vars.acc)]
+        end
+      end,
+      wrap_acc: fn ast ->
+        quote do
+          case unquote(ast) do
+            [] -> ""
+            [_ | tail] -> :lists.reverse(tail) |> IO.iodata_to_binary()
+          end
+        end
+      end
+    }
+  end
+
+  @spec empty?() :: t
+  def empty?() do
+    %{
+      collect: true,
+      halt: true,
+      initial_acc: fn -> true end,
+      next_acc: fn vars, _continue ->
+        quote do
+          unquote(vars.acc) = false
+          {:__ENUMANCER_HALT__, unquote(vars.composite_acc)}
+        end
+      end,
+      wrap_acc: fn ast -> ast end
+    }
+  end
+
+  @spec any?() :: t
+  def any?() do
+    %{
+      collect: true,
+      halt: true,
+      initial_acc: fn -> false end,
+      next_acc: fn vars, _continue ->
+        quote do
+          if unquote(vars.elem) do
+            unquote(vars.acc) = true
+            {:__ENUMANCER_HALT__, unquote(vars.composite_acc)}
+          else
+            unquote(vars.composite_acc)
+          end
+        end
+      end,
+      wrap_acc: fn ast -> ast end
+    }
+  end
+
+  @spec all?() :: t
+  def all?() do
+    %{
+      collect: true,
+      halt: true,
+      initial_acc: fn -> true end,
+      next_acc: fn vars, _continue ->
+        quote do
+          if unquote(vars.elem) do
+            unquote(vars.composite_acc)
+          else
+            unquote(vars.acc) = false
+            {:__ENUMANCER_HALT__, unquote(vars.composite_acc)}
+          end
+        end
+      end,
+      wrap_acc: fn ast -> ast end
+    }
+  end
+
   @spec at(ast, ast) :: t
   def at(_index = value, default) do
     %{
@@ -260,7 +564,7 @@ defmodule Enumancer.Step do
               unquote_splicing(to_exprs(continue))
 
             _ ->
-              unquote(vars.acc) = {:ok, unquote(vars.head)}
+              unquote(vars.acc) = {:ok, unquote(vars.elem)}
               {:__ENUMANCER_HALT__, unquote(vars.composite_acc)}
           end
         end
@@ -284,7 +588,7 @@ defmodule Enumancer.Step do
       initial_acc: fn -> :__ENUMANCER_RESERVED__ end,
       next_acc: fn vars, _continue ->
         quote do
-          unquote(vars.acc) = unquote(vars.head)
+          unquote(vars.acc) = unquote(vars.elem)
           {:__ENUMANCER_HALT__, unquote(vars.composite_acc)}
         end
       end,
@@ -305,7 +609,7 @@ defmodule Enumancer.Step do
       initial_acc: fn -> :__ENUMANCER_RESERVED__ end,
       next_acc: fn vars, _continue ->
         quote do
-          unquote(vars.acc) = unquote(vars.head)
+          unquote(vars.acc) = unquote(vars.elem)
           unquote(vars.composite_acc)
         end
       end,
@@ -344,10 +648,28 @@ defmodule Enumancer.Step do
     %{
       collect: true,
       wrap_acc: fn ast ->
-        case sorter do
-          :asc -> quote do: Enum.sort(unquote(ast))
-          _ -> quote do: Enum.sort(unquote(ast), unquote(sorter))
-        end
+        args =
+          case sorter do
+            :asc -> [ast]
+            _ -> [ast, sorter]
+          end
+
+        quote do: Enum.sort(unquote_splicing(args))
+      end
+    }
+  end
+
+  def sort_by(fun, sorter) do
+    %{
+      collect: true,
+      wrap_acc: fn ast ->
+        args =
+          case sorter do
+            :asc -> [ast, fun]
+            _ -> [ast, fun, sorter]
+          end
+
+        quote do: Enum.sort_by(unquote_splicing(args))
       end
     }
   end
@@ -356,10 +678,11 @@ defmodule Enumancer.Step do
     %{
       next_acc: fn vars, continue ->
         quote do
+          unquote_splicing(maybe_apply_and_reassign(vars.elem, fun))
           # TODO: opti to use ++ if last operation and fun() is a list?
           # TODO: should use reduce_while
-          Enum.reduce(unquote(fun).(unquote(vars.head)), unquote(vars.composite_acc), fn
-            unquote(vars.head), unquote(vars.composite_acc) ->
+          Enum.reduce(unquote(vars.elem), unquote(vars.composite_acc), fn
+            unquote(vars.elem), unquote(vars.composite_acc) ->
               (unquote_splicing(to_exprs(continue)))
           end)
         end
@@ -367,15 +690,37 @@ defmodule Enumancer.Step do
     }
   end
 
+  @identity quote(do: & &1)
+
   def from_ast({:map, _, [fun]}), do: map(fun)
   def from_ast({:filter, _, [fun]}), do: filter(fun)
-  def from_ast({:sum, _, []}), do: sum()
-  def from_ast({:join, _, []}), do: join("")
-  def from_ast({:join, _, [joiner]}), do: join(joiner)
-  def from_ast({:uniq, _, []}), do: uniq()
-  def from_ast({:dedup, _, []}), do: dedup()
+  def from_ast({:reject, _, [fun]}), do: reject(fun)
+  def from_ast({:split_with, _, [fun]}), do: split_with(fun)
   def from_ast({:take, _, [amount]}), do: take(amount)
   def from_ast({:drop, _, [amount]}), do: drop(amount)
+  def from_ast({:split, _, [amount]}), do: split(amount)
+  def from_ast({:take_while, _, [fun]}), do: take_while(fun)
+  def from_ast({:drop_while, _, [fun]}), do: drop_while(fun)
+  def from_ast({:split_while, _, [fun]}), do: split_while(fun)
+  def from_ast({:uniq, _, []}), do: uniq_by(@identity)
+  def from_ast({:uniq_by, _, [fun]}), do: uniq_by(fun)
+  def from_ast({:dedup, _, []}), do: dedup_by(@identity)
+  def from_ast({:dedup_by, _, [fun]}), do: dedup_by(fun)
+  def from_ast({:count, _, []}), do: count()
+  def from_ast({:reduce, _, [acc, fun]}), do: reduce(acc, fun)
+  def from_ast({:each, _, [fun]}), do: each(fun)
+  def from_ast({:sum, _, []}), do: sum()
+  def from_ast({:product, _, []}), do: product()
+  def from_ast({:mean, _, []}), do: mean()
+  def from_ast({:frequencies, _, []}), do: frequencies_by(@identity)
+  def from_ast({:frequencies_by, _, [fun]}), do: frequencies_by(fun)
+  def from_ast({:group_by, _, [key_fun]}), do: group_by(key_fun, @identity)
+  def from_ast({:group_by, _, [key_fun, value_fun]}), do: group_by(key_fun, value_fun)
+  def from_ast({:join, _, []}), do: join("")
+  def from_ast({:join, _, [joiner]}), do: join(joiner)
+  def from_ast({:empty?, _, []}), do: empty?()
+  def from_ast({:any?, _, []}), do: any?()
+  def from_ast({:all?, _, []}), do: all?()
   def from_ast({:at, _, [index]}), do: at(index, nil)
   def from_ast({:at, _, [index, default]}), do: at(index, default)
   def from_ast({:first, _, []}), do: first(nil)
@@ -387,11 +732,20 @@ defmodule Enumancer.Step do
   def from_ast({:to_list, _, []}), do: to_list()
   def from_ast({:sort, _, []}), do: sort(:asc)
   def from_ast({:sort, _, [sorter]}), do: sort(sorter)
-  def from_ast({:concat, _, []}), do: flat_map(quote do: & &1)
+  def from_ast({:sort_by, _, [fun]}), do: sort_by(fun, :asc)
+  def from_ast({:sort_by, _, [fun, sorter]}), do: sort_by(fun, sorter)
+  def from_ast({:concat, _, []}), do: flat_map(@identity)
   def from_ast({:flat_map, _, [fun]}), do: flat_map(fun)
 
   def from_ast(ast) do
     {fun_with_arity, line} = MacroHelpers.fun_arity_and_line(ast)
     raise ArgumentError, "#{line}: Invalid function #{fun_with_arity}"
+  end
+
+  defp maybe_apply_and_reassign(var, fun) do
+    case MacroHelpers.maybe_apply_fun(fun, var) do
+      ^var -> []
+      applied -> [quote(do: unquote(var) = unquote(applied))]
+    end
   end
 end

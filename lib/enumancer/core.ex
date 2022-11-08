@@ -95,7 +95,7 @@ defmodule Enumancer.Core do
 
       unquote(vars.composite_acc) =
         unquote(module).unquote(reduce_fun)(unquote(first), unquote(vars.composite_acc), fn
-          unquote(vars.head), unquote(vars.composite_acc) -> unquote(body)
+          unquote(vars.elem), unquote(vars.composite_acc) -> unquote(body)
         end)
 
       unquote(Step.wrap_acc(last, vars.acc))
@@ -106,8 +106,8 @@ defmodule Enumancer.Core do
   defp init_vars(steps) do
     extra_args = Enum.flat_map(steps, &Map.get(&1, :extra_args, []))
 
-    [:head, :tail, :acc]
-    |> Map.new(&{&1, Macro.unique_var(&1, nil)})
+    [:elem, :rest, :acc]
+    |> Map.new(&{&1, Macro.unique_var(&1, __MODULE__)})
     |> Map.put(:extra_args, extra_args)
     |> add_composite_acc()
   end

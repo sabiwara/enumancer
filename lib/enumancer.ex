@@ -46,12 +46,16 @@ defmodule Enumancer do
   """
   def_enum map(enumerable, fun)
 
+  ##############
+  ## Filtering
+  ##############
+
   @doc """
   .
 
   ## Examples
 
-      iex> E.filter(1..3, &rem(&1, 2) == 1)
+      iex> E.filter(1..4, &rem(&1, 2) == 1)
       [1, 3]
 
   """
@@ -62,55 +66,22 @@ defmodule Enumancer do
 
   ## Examples
 
-      iex> E.sum(1..3)
-      6
+      iex> E.reject(1..4, &rem(&1, 2) == 1)
+      [2, 4]
 
   """
-  def_enum sum(enumerable)
+  def_enum reject(enumerable, fun)
 
   @doc """
   .
 
   ## Examples
 
-      iex> E.join(1..3)
-      "123"
+      iex> E.split_with(1..4, &rem(&1, 2) == 1)
+      {[1, 3], [2, 4]}
 
   """
-  def_enum join(enumerable)
-
-  @doc """
-  .
-
-  ## Examples
-
-      iex> E.join(1..3, "-")
-      "1-2-3"
-
-  """
-  def_enum join(enumerable, joiner)
-
-  @doc """
-  .
-
-  ## Examples
-
-      iex> E.uniq([1, 2, 1, 3, 2, 4])
-      [1, 2, 3, 4]
-
-  """
-  def_enum uniq(enumerable)
-
-  @doc """
-  .
-
-  ## Examples
-
-      iex> E.dedup([1, 2, 2, 3, 3, 1, 3])
-      [1, 2, 3, 1, 3]
-
-  """
-  def_enum dedup(enumerable)
+  def_enum split_with(enumerable, fun)
 
   @doc """
   .
@@ -139,6 +110,292 @@ defmodule Enumancer do
 
   """
   def_enum drop(enumerable, amount)
+
+  @doc """
+  .
+
+  Negative indexes are **NOT** supported, since this would imply to
+  load the whole list and therefore cannot be done lazily.
+
+  ## Examples
+
+      iex> E.split(1..10, 5)
+      {[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]}
+
+  """
+  def_enum split(enumerable, amount)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.take_while(1..1000, & &1 < 6)
+      [1, 2, 3, 4, 5]
+
+  """
+  def_enum take_while(enumerable, fun)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.drop_while(1..10, & &1 < 6)
+      [6, 7, 8, 9, 10]
+
+  """
+  def_enum drop_while(enumerable, fun)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.split_while(1..10, & &1 < 6)
+      {[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]}
+
+  """
+  def_enum split_while(enumerable, fun)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.uniq([1, 2, 1, 3, 2, 4])
+      [1, 2, 3, 4]
+
+  """
+  def_enum uniq(enumerable)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.uniq_by([{1, :x}, {2, :y}, {1, :z}], fn {x, _} -> x end)
+      [{1, :x}, {2, :y}]
+
+  """
+  def_enum uniq_by(enumerable, fun)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.dedup([1, 2, 2, 3, 3, 1, 3])
+      [1, 2, 3, 1, 3]
+
+  """
+  def_enum dedup(enumerable)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.dedup_by([{1, :a}, {2, :b}, {2, :c}, {1, :a}], fn {x, _} -> x end)
+      [{1, :a}, {2, :b}, {1, :a}]
+
+  """
+  def_enum dedup_by(enumerable, fun)
+
+  ##############
+  ## Reducers
+  ##############
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.reduce(1..5, 1, &*/2)
+      120
+
+  """
+  def_enum reduce(enumerable, acc, fun)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> {:ok, pid} = Agent.start(fn -> [] end)
+      iex> E.each(1..5, fn i -> Agent.update(pid, &[i | &1]) end)
+      :ok
+      iex> Agent.get(pid, & &1)
+      [5, 4, 3, 2, 1]
+
+  """
+  def_enum each(enumerable, fun)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.count([1, 2, 3])
+      3
+
+  """
+  def_enum count(enumerable)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.sum(1..3)
+      6
+
+  """
+  def_enum sum(enumerable)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.product(1..3)
+      6
+
+  """
+  def_enum product(enumerable)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.mean(1..10)
+      5.5
+
+  """
+  def_enum mean(enumerable)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.frequencies([1, 1, 2, 1, 2, 3])
+      %{1 => 3, 2 => 2, 3 => 1}
+
+  """
+  def_enum frequencies(enumerable)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.frequencies_by(~w{aa aA bb cc}, &String.downcase/1)
+      %{"aa" => 2, "bb" => 1, "cc" => 1}
+
+  """
+  def_enum frequencies_by(enumerable, fun)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.group_by(~w{ant buffalo cat dingo}, &String.length/1)
+      %{3 => ["cat", "ant"], 5 => ["dingo"], 7 => ["buffalo"]}
+
+  """
+  def_enum group_by(enumerable, key_fun)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.group_by(~w{ant buffalo cat dingo}, &String.length/1, &String.first/1)
+      %{3 => ["c", "a"], 5 => ["d"], 7 => ["b"]}
+
+  """
+  def_enum group_by(enumerable, key_fun, value_fun)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.join(1..3)
+      "123"
+
+  """
+  def_enum join(enumerable)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.join(1..3, "-")
+      "1-2-3"
+
+  """
+  def_enum join(enumerable, joiner)
+
+  ##############
+  ## Find/exist
+  ##############
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.empty?([])
+      true
+
+      iex> E.empty?([:foo])
+      false
+
+  """
+  def_enum empty?(enumerable)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.any?([false, true])
+      true
+
+      iex> E.any?([false, nil])
+      false
+
+      iex> E.any?([])
+      false
+
+  """
+  def_enum any?(enumerable)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.all?(["yes", true])
+      true
+
+      iex> E.all?([false, true])
+      false
+
+      iex> E.all?([])
+      true
+
+  """
+  def_enum all?(enumerable)
+
+  ##############
+  ## Position
+  ##############
 
   @doc """
   .
@@ -224,6 +481,10 @@ defmodule Enumancer do
   """
   def_enum last(enumerable, default)
 
+  ##############
+  ## Wrappers
+  ##############
+
   @doc """
   .
 
@@ -256,6 +517,32 @@ defmodule Enumancer do
 
   """
   def_enum sort(enumerable)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.sort([4, 1, 5, 2, 3], :desc)
+      [5, 4, 3, 2, 1]
+
+  """
+  def_enum sort(enumerable, sorter)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.sort_by(["some", "kind", "of", "monster"], &byte_size/1)
+      ["of", "kind", "some", "monster"]
+
+  """
+  def_enum sort_by(enumerable, fun)
+
+  ##############
+  ## Flattening
+  ##############
 
   @doc """
   .
