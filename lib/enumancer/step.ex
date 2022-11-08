@@ -548,8 +548,125 @@ defmodule Enumancer.Step do
     }
   end
 
+  @spec find(ast, ast) :: t
+  def find(default, fun) do
+    %{
+      collect: true,
+      halt: true,
+      initial_acc: fn -> :__ENUMANCER_RESERVED__ end,
+      next_acc: fn vars, _continue ->
+        quote do
+          if unquote(fun).(unquote(vars.elem)) do
+            unquote(vars.acc) = unquote(vars.elem)
+            {:__ENUMANCER_HALT__, unquote(vars.composite_acc)}
+          else
+            unquote(vars.composite_acc)
+          end
+        end
+      end,
+      wrap_acc: fn ast ->
+        quote do
+          case unquote(ast) do
+            :__ENUMANCER_RESERVED__ -> unquote(default)
+            found -> found
+          end
+        end
+      end
+    }
+  end
+
+  @spec find_value(ast, ast) :: t
+  def find_value(default, fun) do
+    %{
+      collect: true,
+      halt: true,
+      initial_acc: fn -> :__ENUMANCER_RESERVED__ end,
+      next_acc: fn vars, _continue ->
+        quote do
+          if value = unquote(fun).(unquote(vars.elem)) do
+            unquote(vars.acc) = value
+            {:__ENUMANCER_HALT__, unquote(vars.composite_acc)}
+          else
+            unquote(vars.composite_acc)
+          end
+        end
+      end,
+      wrap_acc: fn ast ->
+        quote do
+          case unquote(ast) do
+            :__ENUMANCER_RESERVED__ -> unquote(default)
+            found -> found
+          end
+        end
+      end
+    }
+  end
+
+  @spec find_index(ast) :: t
+  def find_index(fun) do
+    %{
+      collect: true,
+      halt: true,
+      initial_acc: fn -> 0 end,
+      next_acc: fn vars, _continue ->
+        quote do
+          if unquote(fun).(unquote(vars.elem)) do
+            unquote(vars.acc) = {:ok, unquote(vars.acc)}
+            {:__ENUMANCER_HALT__, unquote(vars.composite_acc)}
+          else
+            unquote(vars.acc) = unquote(vars.acc) + 1
+            unquote(vars.composite_acc)
+          end
+        end
+      end,
+      wrap_acc: fn ast ->
+        quote do
+          case unquote(ast) do
+            {:ok, index} -> index
+            _ -> nil
+          end
+        end
+      end
+    }
+  end
+
   @spec at(ast, ast) :: t
-  def at(_index = value, default) do
+  def at(index, default) do
+    do_fetch(index, fn ast ->
+      quote do
+        case unquote(ast) do
+          {:ok, found} -> found
+          index when is_integer(index) -> unquote(default)
+        end
+      end
+    end)
+  end
+
+  @spec fetch(ast) :: t
+  def fetch(index) do
+    do_fetch(index, fn ast ->
+      quote do
+        case unquote(ast) do
+          index when is_integer(index) -> :error
+          ok_tuple -> ok_tuple
+        end
+      end
+    end)
+  end
+
+  @spec fetch!(ast) :: t
+  def fetch!(index) do
+    do_fetch(index, fn ast ->
+      quote do
+        case unquote(ast) do
+          {:ok, found} -> found
+          index when is_integer(index) -> raise Enum.OutOfBoundsError
+        end
+      end
+    end)
+  end
+
+  defp do_fetch(_index = value, wrap_app) do
     %{
       collect: true,
       halt: true,
@@ -570,14 +687,7 @@ defmodule Enumancer.Step do
         end
       end,
       return_acc: fn vars -> vars.acc end,
-      wrap_acc: fn ast ->
-        quote do
-          case unquote(ast) do
-            {:ok, found} -> found
-            index when is_integer(index) -> unquote(default)
-          end
-        end
-      end
+      wrap_acc: wrap_app
     }
   end
 
@@ -721,7 +831,14 @@ defmodule Enumancer.Step do
   def from_ast({:empty?, _, []}), do: empty?()
   def from_ast({:any?, _, []}), do: any?()
   def from_ast({:all?, _, []}), do: all?()
+  def from_ast({:find, _, [fun]}), do: find(nil, fun)
+  def from_ast({:find, _, [default, fun]}), do: find(default, fun)
+  def from_ast({:find_value, _, [fun]}), do: find_value(nil, fun)
+  def from_ast({:find_value, _, [default, fun]}), do: find_value(default, fun)
+  def from_ast({:find_index, _, [fun]}), do: find_index(fun)
   def from_ast({:at, _, [index]}), do: at(index, nil)
+  def from_ast({:fetch, _, [index]}), do: fetch(index)
+  def from_ast({:fetch!, _, [index]}), do: fetch!(index)
   def from_ast({:at, _, [index, default]}), do: at(index, default)
   def from_ast({:first, _, []}), do: first(nil)
   def from_ast({:first, _, [default]}), do: first(default)

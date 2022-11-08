@@ -393,6 +393,56 @@ defmodule Enumancer do
   """
   def_enum all?(enumerable)
 
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.find([2, 3, 4], fn x -> rem(x, 2) == 1 end)
+      3
+
+      iex> E.find([2, 4, 6], fn x -> rem(x, 2) == 1 end)
+      nil
+
+      iex> E.find([2, 4, 6], 0, fn x -> rem(x, 2) == 1 end)
+      0
+
+  """
+  def_enum find(enumerable, fun)
+  def_enum find(enumerable, default, fun)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.find_value([%{x: nil}, %{x: 5}, %{}], fn map -> map[:x] end)
+      5
+
+      iex> E.find_value([%{x: nil}, %{}, %{}], fn map -> map[:x] end)
+      nil
+
+      iex> E.find_value([%{x: nil}, %{}, %{}], 0, fn map -> map[:x] end)
+      0
+
+  """
+  def_enum find_value(enumerable, fun)
+  def_enum find_value(enumerable, default, fun)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.find_index(["ant", "bat", "cat"], fn x -> x =~ "b" end)
+      1
+
+      iex> E.find_index(["ant", "bat", "cat"], fn x -> x =~ "z" end)
+      nil
+
+  """
+  def_enum find_index(enumerable, fun)
+
   ##############
   ## Position
   ##############
@@ -405,13 +455,48 @@ defmodule Enumancer do
 
   ## Examples
 
-      iex> E.at(1..1000, 5)
-      6
-      iex> E.at(1..1000, 1000)
+      iex> E.at([:foo, :bar, :baz], 2)
+      :baz
+
+      iex> E.at([:foo, :bar, :baz], 3)
       nil
 
   """
   def_enum at(enumerable, index)
+
+  @doc """
+  .
+
+  Negative indexes are **NOT** supported, since this would imply to
+  load the whole list and therefore cannot be done lazily.
+
+  ## Examples
+
+      iex> E.fetch([:foo, :bar, :baz], 2)
+      {:ok, :baz}
+
+      iex> E.fetch([:foo, :bar, :baz], 3)
+      :error
+
+  """
+  def_enum fetch(enumerable, index)
+
+  @doc """
+  .
+
+  Negative indexes are **NOT** supported, since this would imply to
+  load the whole list and therefore cannot be done lazily.
+
+  ## Examples
+
+      iex> E.fetch!([:foo, :bar, :baz], 2)
+      :baz
+
+      iex> E.fetch!([:foo, :bar, :baz], 3)
+      ** (Enum.OutOfBoundsError) out of bounds error
+
+  """
+  def_enum fetch!(enumerable, index)
 
   @doc """
   .
