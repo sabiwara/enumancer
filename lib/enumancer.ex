@@ -46,6 +46,21 @@ defmodule Enumancer do
   """
   def_enum map(enumerable, fun)
 
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.with_index(["a", "b", "c"])
+      [{"a", 0}, {"b", 1}, {"c", 2}]
+
+      iex> E.with_index(["a", "b", "c"], 100)
+      [{"a", 100}, {"b", 101}, {"c", 102}]
+
+  """
+  def_enum with_index(enumerable)
+  def_enum with_index(enumerable, offset)
+
   ##############
   ## Filtering
   ##############
@@ -211,11 +226,36 @@ defmodule Enumancer do
 
   ## Examples
 
+      iex> E.reduce(1..5, &*/2)
+      120
+
+      iex> E.reduce([], &*/2)
+      ** (Enum.EmptyError) empty error
+
+  """
+  def_enum reduce(enumerable, fun)
+
+  @doc """
+  .
+
+  ## Examples
+
       iex> E.reduce(1..5, 1, &*/2)
       120
 
   """
   def_enum reduce(enumerable, acc, fun)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.scan(1..5, 1, &*/2)
+      [1, 2, 6, 24, 120]
+
+  """
+  def_enum scan(enumerable, acc, fun)
 
   @doc """
   .
@@ -274,6 +314,34 @@ defmodule Enumancer do
 
   """
   def_enum mean(enumerable)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.max([2, 4, 1, 3])
+      4
+
+      iex> E.max([])
+      ** (Enum.EmptyError) empty error
+
+  """
+  def_enum max(enumerable)
+
+  @doc """
+  .
+
+  ## Examples
+
+      iex> E.min([2, 4, 1, 3])
+      1
+
+      iex> E.min([])
+      ** (Enum.EmptyError) empty error
+
+  """
+  def_enum min(enumerable)
 
   @doc """
   .
@@ -624,6 +692,19 @@ defmodule Enumancer do
 
   """
   def_enum sort_by(enumerable, fun)
+
+  @doc """
+  .
+
+  ## Examples
+
+      # Although not necessary, let's seed the random algorithm
+      iex> :rand.seed(:exsss, {1, 2, 3})
+      iex> E.shuffle(1..6)
+      [4, 5, 2, 6, 3, 1]
+
+  """
+  def_enum shuffle(enumerable)
 
   ##############
   ## Flattening

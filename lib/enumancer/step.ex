@@ -69,6 +69,23 @@ defmodule Enumancer.Step do
     }
   end
 
+  @spec with_index(ast) :: t
+  def with_index(offset) do
+    index = Macro.unique_var(:index, __MODULE__)
+
+    %{
+      extra_args: [index],
+      init: fn -> quote do: unquote(index) = unquote(offset) end,
+      next_acc: fn vars, continue ->
+        quote do
+          unquote(vars.elem) = {unquote(vars.elem), unquote(index)}
+          unquote(index) = unquote(index) + 1
+          unquote_splicing(to_exprs(continue))
+        end
+      end
+    }
+  end
+
   @spec filter(ast) :: t
   def filter(fun) do
     %{
@@ -314,6 +331,30 @@ defmodule Enumancer.Step do
     }
   end
 
+  @spec reduce(ast) :: t
+  def reduce(fun) do
+    %{
+      collect: true,
+      initial_acc: fn -> :__ENUMANCER_RESERVED__ end,
+      return_acc: fn vars ->
+        quote do
+          case unquote(vars.acc) do
+            :__ENUMANCER_RESERVED__ -> unquote(vars.elem)
+            acc -> unquote(fun).(unquote(vars.elem), acc)
+          end
+        end
+      end,
+      wrap_acc: fn ast ->
+        quote do
+          case unquote(ast) do
+            :__ENUMANCER_RESERVED__ -> raise Enum.EmptyError
+            acc -> acc
+          end
+        end
+      end
+    }
+  end
+
   @spec reduce(ast, ast) :: t
   def reduce(initial, fun) do
     %{
@@ -323,6 +364,24 @@ defmodule Enumancer.Step do
         quote do: unquote(fun).(unquote(vars.elem), unquote(vars.acc))
       end,
       wrap_acc: fn ast -> ast end
+    }
+  end
+
+  @spec scan(ast, ast) :: t
+  def scan(initial, fun) do
+    last_acc = Macro.unique_var(:initial, __MODULE__)
+
+    %{
+      init: fn -> quote do: unquote(last_acc) = unquote(initial) end,
+      extra_args: [last_acc],
+      next_acc: fn vars, continue ->
+        quote do
+          unquote(last_acc) =
+            unquote(vars.elem) = unquote(fun).(unquote(vars.elem), unquote(last_acc))
+
+          unquote_splicing(to_exprs(continue))
+        end
+      end
     }
   end
 
@@ -399,6 +458,53 @@ defmodule Enumancer.Step do
         end
       end,
       wrap_acc: fn ast -> quote do: unquote(ast) / unquote(count) end
+    }
+  end
+
+  @spec max() :: t
+  def max() do
+    do_min_max(fn vars ->
+      quote do
+        acc when acc >= unquote(vars.elem) -> acc
+        _ -> unquote(vars.elem)
+      end
+    end)
+  end
+
+  @spec min() :: t
+  def min() do
+    do_min_max(fn vars ->
+      quote do
+        acc when acc <= unquote(vars.elem) -> acc
+        _ -> unquote(vars.elem)
+      end
+    end)
+  end
+
+  defp do_min_max(clauses_fun) do
+    %{
+      collect: true,
+      initial_acc: fn -> :__ENUMANCER_RESERVED__ end,
+      return_acc: fn vars ->
+        clauses =
+          quote do
+            :__ENUMANCER_RESERVED__ -> unquote(vars.elem)
+          end ++ clauses_fun.(vars)
+
+        quote do
+          case unquote(vars.acc) do
+            unquote(clauses)
+          end
+        end
+      end,
+      wrap_acc: fn ast ->
+        quote do
+          case unquote(ast) do
+            :__ENUMANCER_RESERVED__ -> raise Enum.EmptyError
+            acc -> acc
+          end
+        end
+      end
     }
   end
 
@@ -784,6 +890,15 @@ defmodule Enumancer.Step do
     }
   end
 
+  def shuffle() do
+    %{
+      collect: true,
+      wrap_acc: fn ast ->
+        quote do: Enum.shuffle(unquote(ast))
+      end
+    }
+  end
+
   def flat_map(fun) do
     %{
       next_acc: fn vars, continue ->
@@ -803,6 +918,8 @@ defmodule Enumancer.Step do
   @identity quote(do: & &1)
 
   def from_ast({:map, _, [fun]}), do: map(fun)
+  def from_ast({:with_index, _, []}), do: with_index(0)
+  def from_ast({:with_index, _, [fun]}), do: with_index(fun)
   def from_ast({:filter, _, [fun]}), do: filter(fun)
   def from_ast({:reject, _, [fun]}), do: reject(fun)
   def from_ast({:split_with, _, [fun]}), do: split_with(fun)
@@ -817,11 +934,15 @@ defmodule Enumancer.Step do
   def from_ast({:dedup, _, []}), do: dedup_by(@identity)
   def from_ast({:dedup_by, _, [fun]}), do: dedup_by(fun)
   def from_ast({:count, _, []}), do: count()
+  def from_ast({:reduce, _, [fun]}), do: reduce(fun)
   def from_ast({:reduce, _, [acc, fun]}), do: reduce(acc, fun)
+  def from_ast({:scan, _, [acc, fun]}), do: scan(acc, fun)
   def from_ast({:each, _, [fun]}), do: each(fun)
   def from_ast({:sum, _, []}), do: sum()
   def from_ast({:product, _, []}), do: product()
   def from_ast({:mean, _, []}), do: mean()
+  def from_ast({:max, _, []}), do: max()
+  def from_ast({:min, _, []}), do: min()
   def from_ast({:frequencies, _, []}), do: frequencies_by(@identity)
   def from_ast({:frequencies_by, _, [fun]}), do: frequencies_by(fun)
   def from_ast({:group_by, _, [key_fun]}), do: group_by(key_fun, @identity)
@@ -851,6 +972,7 @@ defmodule Enumancer.Step do
   def from_ast({:sort, _, [sorter]}), do: sort(sorter)
   def from_ast({:sort_by, _, [fun]}), do: sort_by(fun, :asc)
   def from_ast({:sort_by, _, [fun, sorter]}), do: sort_by(fun, sorter)
+  def from_ast({:shuffle, _, []}), do: shuffle()
   def from_ast({:concat, _, []}), do: flat_map(@identity)
   def from_ast({:flat_map, _, [fun]}), do: flat_map(fun)
 
