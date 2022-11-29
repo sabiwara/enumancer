@@ -45,7 +45,7 @@ defmodule Enumancer.MixProject do
       maintainers: ["sabiwara"],
       licenses: ["MIT"],
       links: %{"GitHub" => @github_url},
-      files: ~w(lib mix.exs README.md LICENSE.md CHANGELOG.md)
+      files: ~w(lib mix.exs README.md LICENSE.md CHANGELOG.md cheatsheet.cheatmd)
     ]
   end
 
@@ -54,7 +54,7 @@ defmodule Enumancer.MixProject do
       source_ref: "v#{@version}",
       source_url: @github_url,
       homepage_url: @github_url,
-      extras: ["README.md", "CHANGELOG.md", "LICENSE.md"]
+      extras: ["README.md", "cheatsheet.cheatmd", "CHANGELOG.md", "LICENSE.md"]
     ]
   end
 end
