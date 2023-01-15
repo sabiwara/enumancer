@@ -6,7 +6,9 @@
 
 Elixir macros to effortlessly define highly optimized `Enum` pipelines.
 
-**Warning**: `Enumancer` is still an early proof-of-concept.
+**Warning**: `Enumancer` is an early proof-of-concept with limited
+functionality, but you can check [`Iter`](https://github.com/sabiwara/iter)
+which offers a more practical and extensive API.
 
 ## Overview
 
